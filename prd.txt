@@ -1,0 +1,133 @@
+# **Product Requirements Document (PRD)**
+## **1. Overview**
+### **1.1 Product Name:**
+AI-Powered Translation Platform
+
+### **1.2 Description:**
+This service provides AI-powered text translation using GPT-4o-mini. Users can access different levels of translation capabilities based on their subscription plan. The platform supports Google and Email authentication and enforces IP-based signup restrictions to prevent abuse. All text displayed on the website will be in English.
+
+### **1.3 Target Users:**
+- Individuals who need quick, high-quality translations.
+- Professionals who require more frequent and detailed translations.
+- Businesses looking for AI-powered translation solutions.
+
+### **1.4 Key Features:**
+✅ AI-powered translation using GPT-4o-mini
+✅ Different user plans with translation limits
+✅ Secure authentication via Google & Email
+✅ IP-based signup restrictions to prevent multiple accounts
+✅ Rate limiting per user and IP to prevent abuse
+✅ Paid plans (Pro & Premium) for higher usage limits
+✅ User-friendly UI to track remaining translation quota
+✅ All text on the website is displayed in English
+
+---
+
+## **2. Business Model & Pricing Plans**
+### **2.1 Free Plan (Basic - Logged In Users)**
+- **Max characters per request:** 1,000
+- **Max requests per day:** 10
+- **Access level:** Requires login
+- **Revenue model:** Ad-supported, limited usage
+
+### **2.2 Pro Plan (Paid - Subscription Model)**
+- **Max characters per request:** 5,000
+- **Max requests per day:** 50
+- **Access level:** Paid users only
+- **Revenue model:** Subscription ($9.99/month or $99/year)
+
+### **2.3 Premium Plan (Paid - Subscription Model)**
+- **Max characters per request:** Unlimited
+- **Max requests per day:** Unlimited
+- **Access level:** Paid users only
+- **Revenue model:** Subscription ($19.99/month or $199/year)
+
+### **2.4 Guest Users (Not Logged In)**
+- **Max characters per request:** 500
+- **Max requests per day:** 5 (IP-based limit)
+- **Access level:** No account required
+- **Revenue model:** Ad-supported
+
+---
+
+## **3. Technical Requirements**
+### **3.1 Tech Stack**
+- **Frontend:** Next.js (React)
+- **Backend:** Next.js API Routes
+- **Database:** Supabase (PostgreSQL)
+- **Authentication:** Supabase Auth (Google & Email Login)
+- **Rate Limiting:** Redis (IP & user-based limits)
+- **Translation API:** OpenAI GPT-4o-mini
+- **Payments:** Stripe (for Pro & Premium subscriptions)
+
+### **3.2 API Endpoints**
+#### **User Authentication**
+- `/api/auth/signup` → Handles new user registration (with IP tracking)
+- `/api/auth/login` → Authenticates users via Google or Email
+- `/api/auth/logout` → Logs out users
+
+#### **Translation Service**
+- `/api/translate`
+  - Validates user plan
+  - Checks rate limits (IP & user-based via Redis)
+  - Calls OpenAI GPT-4o-mini for translation
+  - Logs request details in Supabase
+
+#### **Subscription Management**
+- `/api/subscribe` → Handles payments via Stripe
+- `/api/webhook/stripe` → Listens for successful payments & updates user plan
+
+---
+
+## **4. User Flow & Experience**
+### **4.1 Signup & Login Flow**
+1. User visits the website and selects **Sign Up**.
+2. They choose Google login or Email signup.
+3. If signing up via Email, the system checks if the **IP has already been used**.
+4. If IP is unique, the account is created; otherwise, they are blocked from multiple registrations.
+5. After successful login, the user is redirected to the main translation page.
+
+### **4.2 Translation Flow**
+1. User enters text into the translation input box.
+2. System checks:
+   - **Character limit per request** (based on user plan)
+   - **Request count per day** (IP/user-based limit)
+3. If within limits, the system calls OpenAI GPT-4o-mini and returns the translation.
+4. If limits are exceeded, an error message is displayed, suggesting an upgrade.
+5. If the user is **Pro or Premium**, their requests are processed accordingly.
+
+### **4.3 Subscription & Payment Flow**
+1. User clicks **Upgrade to Pro/Premium**.
+2. They are redirected to **Stripe Checkout**.
+3. After payment, Stripe **triggers a webhook** that updates the user’s subscription plan in Supabase.
+4. User is redirected back to the app with **increased translation limits**.
+
+---
+
+## **5. Security & Abuse Prevention**
+- **IP-based signup restrictions** (prevents multiple accounts per IP)
+- **Rate limiting via Redis** (prevents excessive usage per user/IP)
+- **Role-based access control** (ensures only paid users access higher limits)
+- **Stripe webhook validation** (prevents unauthorized plan upgrades)
+
+---
+
+## **6. Monetization Strategy**
+- **Subscription revenue** (Pro & Premium plans)
+- **Ad revenue for Free & Guest users**
+- **Enterprise API licensing (future expansion)**
+
+---
+
+## **7. Future Enhancements**
+- **Mobile app version** for iOS & Android
+- **Multi-language support** beyond English
+- **Speech-to-text input for voice translations**
+- **Custom AI models for industry-specific translations**
+- **Enterprise plan with API access for businesses**
+
+---
+
+## **8. Conclusion**
+This AI-powered translation platform provides **high-quality GPT-4o-mini translations** with flexible pricing plans. By implementing **IP-based security, rate limiting, and a subscription model**, the service ensures **fair usage** while maximizing **revenue potential**. Future enhancements will focus on **expanding language support, mobile accessibility, and enterprise solutions**. All text displayed on the website will be in English.
+
