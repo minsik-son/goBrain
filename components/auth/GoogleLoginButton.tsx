@@ -28,7 +28,7 @@ export default function GoogleLoginButton({ setIsLoading, onSuccess }: GoogleLog
         throw error
       }
       
-      // 성공적으로 리디렉션될 것이므로 여기서는 특별한 처리가 필요 없습니다
+      // No special handling needed here as it will redirect successfully
     } catch (error: any) {
       toast({
         title: "Error",
