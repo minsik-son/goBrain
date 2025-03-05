@@ -39,7 +39,6 @@ export default function LoginButton() {
             <TabsTrigger value="email">Email</TabsTrigger>
             <TabsTrigger value="google">Google</TabsTrigger>
           </TabsList>
-          
           <TabsContent value="email">
             <EmailLoginForm setIsLoading={setIsLoading} onSuccess={() => setIsOpen(false)} />
           </TabsContent>

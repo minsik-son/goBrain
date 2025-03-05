@@ -1,54 +1,67 @@
-import { Check } from "lucide-react"
-
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { SiteHeader } from "@/components/site-header"
+import { Check } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { SiteHeader } from "@/components/site-header";
 
 const plans = [
   {
-    name: "Free",
-    description: "Essential translation features for casual users.",
+    name: "Guest",
+    description: "Basic translation access without login.",
     price: "$0",
     duration: "forever",
     features: [
       "500 characters per translation",
+      "3 translations per day",
+      "Ad-supported experience",
+    ],
+    highlighted: false,
+  },
+  {
+    name: "Free",
+    description: "Essential translation features for registered users.",
+    price: "$0",
+    duration: "forever",
+    features: [
+      "1,000 characters per translation",
       "10 translations per day",
-      "Basic language support (10 languages)",
-      "Standard translation quality",
+      "Ad-supported experience",
     ],
     highlighted: false,
   },
   {
     name: "Pro",
-    description: "Advanced features for professionals and businesses.",
+    description: "Enhanced translation capabilities for professionals.",
     price: "$9.99",
     duration: "per month",
     features: [
-      "Unlimited characters per translation",
-      "Unlimited translations",
-      "All languages supported (100+)",
-      "High-quality translations",
-      "Priority support",
-      "Document translation",
+      "5,000 characters per translation",
+      "50 translations per day",
+      "Enhanced AI Translation Model",
+      "No ads",
+      "Pronunciation speaker",
+      "Save translation history",
+      "Document translation (Word/PDF, up to 10MB)",
     ],
     highlighted: true,
   },
   {
-    name: "Enterprise",
-    description: "Custom solutions for large organizations.",
-    price: "Custom",
-    duration: "contact for pricing",
+    name: "Premium",
+    description: "Unlimited access with premium translation features.",
+    price: "$19.99",
+    duration: "per month",
     features: [
-      "Everything in Pro",
-      "Custom API integration",
-      "Dedicated account manager",
-      "99.9% uptime SLA",
-      "Advanced security features",
-      "Custom language models",
+      "Unlimited characters per translation",
+      "Unlimited translations",
+      "Enhanced AI Translation Model",
+      "No ads",
+      "Pronunciation speaker",
+      "Microphone input for speech translation",
+      "Real-time conversation translation",
+      "Document translation (Word/PDF, up to 50MB)",
     ],
     highlighted: false,
   },
-]
+];
 
 export default function PricingPage() {
   return (
@@ -60,15 +73,17 @@ export default function PricingPage() {
             <h1 className="text-center text-3xl font-extrabold leading-tight tracking-tighter md:text-4xl">
               Pricing Plans
             </h1>
-            <p className="text-center text-muted-foreground md:text-xl">Choose the plan that works best for you</p>
+            <p className="text-center text-muted-foreground md:text-xl">
+              Choose the plan that works best for you
+            </p>
           </div>
-          <div className="mx-auto grid max-w-screen-lg gap-5 py-10 md:grid-cols-3">
+          <div className="mx-auto grid max-w-screen-lg gap-5 py-10 md:grid-cols-2 lg:grid-cols-4">
             {plans.map((plan) => (
               <div
                 key={plan.name}
                 className={cn(
                   "relative flex flex-col rounded-lg border p-6",
-                  plan.highlighted && "border-primary shadow-lg",
+                  plan.highlighted && "border-primary shadow-lg"
                 )}
               >
                 {plan.highlighted && (
@@ -96,7 +111,7 @@ export default function PricingPage() {
                   className={cn("mt-auto", plan.highlighted ? "bg-primary" : "bg-muted")}
                   variant={plan.highlighted ? "default" : "outline"}
                 >
-                  {plan.name === "Enterprise" ? "Contact Sales" : "Get Started"}
+                  {plan.name === "Premium" ? "Upgrade to Premium" : plan.name === "Pro" ? "Upgrade to Pro" : "Get Started"}
                 </Button>
               </div>
             ))}
@@ -104,6 +119,5 @@ export default function PricingPage() {
         </section>
       </main>
     </div>
-  )
+  );
 }
-
