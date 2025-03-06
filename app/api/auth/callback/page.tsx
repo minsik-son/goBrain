@@ -13,6 +13,7 @@ export default function AuthCallbackPage() {
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' || session) {
         // Trigger storage event to notify other components
+        console.log("signed in successfully")
         window.localStorage.setItem('supabase.auth.token', 'updated')
         window.dispatchEvent(new Event('storage'))
         
@@ -20,6 +21,9 @@ export default function AuthCallbackPage() {
         setTimeout(() => {
           router.push('/')
         }, 1000)
+      }
+      else{
+        console.log("signed in error")
       }
     })
 
@@ -37,3 +41,4 @@ export default function AuthCallbackPage() {
     </div>
   )
 } 
+
