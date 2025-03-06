@@ -1,14 +1,14 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Check, ChevronsUpDown, Copy, CheckCircle2, ArrowLeftRight } from "lucide-react"
 import { franc } from "franc-min"
-
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Textarea } from "@/components/ui/textarea"
+
 
 const languages = [
   { value: "detect", label: "Detect Language" },
@@ -24,6 +24,25 @@ const languages = [
   { value: "korean", label: "Korean" },
   { value: "arabic", label: "Arabic" },
 ]
+
+// 언어 목록을 A-Z 순서로 정렬 (Detect Language 제외)
+const sortedLanguages = [...languages]
+  .filter(lang => lang.value !== "detect")
+  .sort((a, b) => a.label.localeCompare(b.label));
+
+// 입력 언어 목록 가져오기 (Detect Language가 맨 위에)
+const getInputLanguages = (excludeLanguage: string) => {
+  const detectLanguage = languages.find(lang => lang.value === "detect");
+  const otherLanguages = sortedLanguages
+    .filter(lang => lang.value !== excludeLanguage);
+  
+  return detectLanguage ? [detectLanguage, ...otherLanguages] : otherLanguages;
+};
+
+// 출력 언어 목록 가져오기 (Detect Language 제외)
+const getOutputLanguages = (excludeLanguage: string) => {
+  return sortedLanguages.filter(lang => lang.value !== excludeLanguage && lang.value !== "detect");
+};
 
 // franc uses ISO 639-3 codes. 
 // These are some common mappings for your example's language set:
@@ -43,7 +62,7 @@ const codeToLabelMap: Record<string, string> = {
 
 export function Translator() {
   const [inputLanguage, setInputLanguage] = useState(languages[0]) // Default: Detect
-  const [outputLanguage, setOutputLanguage] = useState(languages[1]) // Default: English
+  const [outputLanguage, setOutputLanguage] = useState(sortedLanguages[0]) // Default: English
   const [inputText, setInputText] = useState("")
   const [outputText, setOutputText] = useState("")
   const [inputOpen, setInputOpen] = useState(false)
@@ -56,6 +75,13 @@ export function Translator() {
     remaining: number
   } | null>(null)
   const [error, setError] = useState<string | null>(null)
+  
+  // 현재 번역 중인 텍스트를 추적하기 위한 ref
+  const currentInputRef = useRef<string>("")
+  // 번역 요청의 취소를 위한 AbortController
+  const abortControllerRef = useRef<AbortController | null>(null)
+  // 번역 요청이 진행 중인지 추적하는 ref
+  const isTranslatingRef = useRef<boolean>(false)
 
   // Debounce to avoid excessive API calls
   useEffect(() => {
@@ -67,6 +93,19 @@ export function Translator() {
     return () => clearTimeout(debounceTimeout)
   }, [inputText, inputLanguage, outputLanguage])
 
+  // 입력값이 변경될 때마다 호출되어 이전 번역 요청을 취소
+  useEffect(() => {
+    // 입력값이 없으면 출력값도 초기화
+    if (!inputText.trim()) {
+      setOutputText("")
+    }
+    
+    // 이전 번역 요청 취소
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+    }
+  }, [inputText])
+
   const translateText = async () => {
     if (!inputText.trim()) {
       setOutputText("")
@@ -74,8 +113,20 @@ export function Translator() {
     }
 
     try {
+      // 이전 번역 요청 취소
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort()
+      }
+      
+      // 새로운 AbortController 생성
+      abortControllerRef.current = new AbortController()
+      
       setIsTranslating(true)
+      isTranslatingRef.current = true
       setError(null)
+      
+      // 현재 입력값 저장
+      currentInputRef.current = inputText
 
       // If Detect Language is selected, attempt to detect with franc
       if (inputLanguage.value === "detect") {
@@ -83,22 +134,37 @@ export function Translator() {
         if (detectedCode !== "und" && codeToLabelMap[detectedCode]) {
           const detectedLabel = codeToLabelMap[detectedCode]
           const matchedLanguage = languages.find((l) => l.label === detectedLabel)
+      
           if (matchedLanguage) {
-            setInputLanguage(matchedLanguage)
+            // Output 언어와 동일할 경우 다음 언어로 변경
+            if (matchedLanguage.value === outputLanguage.value) {
+              const currentIndex = sortedLanguages.findIndex((l) => l.value === matchedLanguage.value)
+              const nextIndex = (currentIndex + 1) % sortedLanguages.length // 마지막이면 처음으로 돌아감
+              const nextLanguage = sortedLanguages[nextIndex]
+      
+              setOutputLanguage(nextLanguage)
+            } else {
+              setInputLanguage(matchedLanguage)
+            }
           } else {
             setError(`Detected language code "${detectedCode}" is not in the language list.`)
             setIsTranslating(false)
+            isTranslatingRef.current = false
             setOutputText("")
             return
           }
         } else {
-          setError("Unable to detect language.")
+          // setError("Unable to detect language.")
           setIsTranslating(false)
+          isTranslatingRef.current = false
           setOutputText("")
           return
         }
       }
-
+      
+      // 현재 상태의 입력값 캡처
+      const translationInput = inputText
+      
       const response = await fetch("/api/translate", {
         method: "POST",
         headers: {
@@ -110,6 +176,7 @@ export function Translator() {
           inputLanguage: inputLanguage.label,
           outputLanguage: outputLanguage.label,
         }),
+        signal: abortControllerRef.current.signal
       })
 
       const data = await response.json()
@@ -117,8 +184,14 @@ export function Translator() {
       if (!response.ok) {
         throw new Error(data.error || "Translation request failed")
       }
-
-      setOutputText(data.text)
+      
+      // 번역 결과를 받은 시점에서 입력값이 변경되었는지 확인
+      // 입력값이 비어있으면 번역 결과를 표시하지 않음
+      if (inputText.trim() === "") {
+        setOutputText("")
+      } else {
+        setOutputText(data.text)
+      }
 
       if (data.limit) {
         setUsageStats({
@@ -128,11 +201,18 @@ export function Translator() {
         })
       }
     } catch (err) {
+      // AbortError는 에러 메시지를 표시하지 않음
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        console.log('Translation request aborted')
+        return
+      }
+      
       console.error("Translation error:", err)
       setError(err instanceof Error ? err.message : "An error occurred during translation.")
       setOutputText("")
     } finally {
       setIsTranslating(false)
+      isTranslatingRef.current = false
     }
   }
 
@@ -147,6 +227,16 @@ export function Translator() {
     setOutputText(inputText)
   }
 
+  const inputTextClear = () => {
+    setInputText("")
+    setOutputText("")
+    
+    // 진행 중인 번역 요청 취소
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+    }
+  }
+
   const copyToClipboard = async () => {
     if (!outputText) return
     try {
@@ -156,6 +246,25 @@ export function Translator() {
     } catch (err) {
       console.error("Failed to copy text:", err)
     }
+  }
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const text = e.target.value
+    setInputText(text)
+    
+    // 입력값이 비어있으면 출력값도 초기화
+    if (text === ""){
+      setOutputText("")
+      
+      // 진행 중인 번역 요청 취소
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort()
+        abortControllerRef.current = null
+      }
+    }
+    
+    e.target.style.height = "auto" // 초기화
+    e.target.style.height = `${e.target.scrollHeight}px` 
   }
 
   // Output Textarea의 높이 조정
@@ -184,13 +293,14 @@ export function Translator() {
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
               </Button>
             </PopoverTrigger>
+            {/**Input Language Popover */}
             <PopoverContent className="w-full p-0">
               <Command>
                 <CommandInput placeholder="Search language..." />
                 <CommandList>
                   <CommandEmpty>No language found.</CommandEmpty>
                   <CommandGroup>
-                    {languages.map((lang) => (
+                    {getInputLanguages(outputLanguage.value).map((lang) => (
                       <CommandItem
                         key={lang.value}
                         value={lang.value}
@@ -233,13 +343,14 @@ export function Translator() {
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
               </Button>
             </PopoverTrigger>
+            {/**Output Language Popover */}
             <PopoverContent className="w-full p-0">
               <Command>
                 <CommandInput placeholder="Search language..." />
                 <CommandList>
                   <CommandEmpty>No language found.</CommandEmpty>
                   <CommandGroup>
-                    {languages.filter(lang => lang.value !== "detect").map((lang) => (
+                    {getOutputLanguages(inputLanguage.value).map((lang) => (
                       <CommandItem
                         key={lang.value}
                         value={lang.value}
@@ -267,19 +378,25 @@ export function Translator() {
 
       <div className="flex flex-col md:flex-row justify-between gap-4">
         {/* Input Text */}
-        <div className="w-full md:w-[49%]">
+        <div className="relative w-full md:w-[49%]">
           <Textarea
             placeholder="Enter text to translate..."
-            className="w-full resize-y overflow-hidden"
-            style={{ minHeight: "400px", height: "auto" }}
+            className="w-full resize-y overflow-hidden pr-8"
+            style={{ minHeight: "400px", height: "auto"}}
             value={inputText}
-            onChange={(e) => {
-              setInputText(e.target.value)
-              // 자동 높이 조정
-              e.target.style.height = "auto" // 초기화
-              e.target.style.height = `${e.target.scrollHeight}px` // 내용에 따라 높이 조정
-            }}
+            onChange={handleInputChange}
           />
+          {inputText && (
+            <Button 
+              id="clear-input"
+              size="icon"
+              variant="ghost"
+              onClick={inputTextClear}
+              className="absolute top-2 right-2 w-6 h-6 rounded-full bg-white-200 border-gray-300 hover:bg-gray-300 text-black"
+            >
+            X
+            </Button>
+          )}
         </div>
 
         {/* Output Text */}

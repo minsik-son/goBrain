@@ -26,29 +26,8 @@ export default function LoginButton() {
           )}
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Sign In</DialogTitle>
-          <DialogDescription>
-            Sign in to access more translation features.
-          </DialogDescription>
-        </DialogHeader>
-        
-        <Tabs defaultValue="email" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="email">Email</TabsTrigger>
-            <TabsTrigger value="google">Google</TabsTrigger>
-          </TabsList>
-          <TabsContent value="email">
-            <EmailLoginForm setIsLoading={setIsLoading} onSuccess={() => setIsOpen(false)} />
-          </TabsContent>
-          
-          <TabsContent value="google">
-            <div className="flex flex-col space-y-4 py-4">
-              <GoogleLoginButton setIsLoading={setIsLoading} onSuccess={() => setIsOpen(false)} />
-            </div>
-          </TabsContent>
-        </Tabs>
+      <DialogContent className="sm:max-w-[425px]"> 
+        <EmailLoginForm setIsLoading={setIsLoading} onSuccess={() => setIsOpen(false)} />
       </DialogContent>
     </Dialog>
   )
