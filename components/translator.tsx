@@ -62,7 +62,7 @@ const codeToLabelMap: Record<string, string> = {
 
 export function Translator() {
   const [inputLanguage, setInputLanguage] = useState(languages[0]) // Default: Detect
-  const [outputLanguage, setOutputLanguage] = useState(sortedLanguages[0]) // Default: English
+  const [outputLanguage, setOutputLanguage] = useState(sortedLanguages[2]) // Default: English
   const [inputText, setInputText] = useState("")
   const [outputText, setOutputText] = useState("")
   const [inputOpen, setInputOpen] = useState(false)
@@ -161,7 +161,11 @@ export function Translator() {
           return
         }
       }
-      
+      /**
+       * 
+       * 과제가 아닌 직접 배포를 할생각으로 개발을 하게되니 실무에서 일하는 기술들을 찾아보며 배우게 됬고 현업에서는 어떤 기술들이 트랜드인지 파악해ㅐ볼수있는 기회를 가졌습니다.
+       * 
+       */
       // 현재 상태의 입력값 캡처
       const translationInput = inputText
       

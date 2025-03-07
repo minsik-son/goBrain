@@ -3,8 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { Loader2 } from "lucide-react"
 import { useState } from "react"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import EmailLoginForm from "@/components/auth/EmailLoginForm"
 import GoogleLoginButton from "@/components/auth/GoogleLoginButton"
 
@@ -26,7 +25,10 @@ export default function LoginButton() {
           )}
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]"> 
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle></DialogTitle>
+        </DialogHeader>
         <EmailLoginForm setIsLoading={setIsLoading} onSuccess={() => setIsOpen(false)} />
       </DialogContent>
     </Dialog>
