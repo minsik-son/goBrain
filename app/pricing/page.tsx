@@ -2,6 +2,7 @@ import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { SiteHeader } from "@/components/site-header";
+import Footer from "@/components/footer";
 
 const plans = [
   {
@@ -118,6 +119,7 @@ export default function PricingPage() {
           </div>
         </section>
       </main>
+        <Footer/>
     </div>
   );
 }

@@ -45,32 +45,52 @@ export function SiteHeader() {
     }
   }, [supabase])
 
+  // 드롭다운 외부 클릭 시 닫기
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      const dropdown = document.getElementById("dropdown-menu");
+      const button = document.getElementById("dropdown-button");
+
+      // 드롭다운 버튼이나 드롭다운 메뉴 외부를 클릭했을 때 드롭다운 닫기
+      if (dropdownOpen && dropdown && button && !dropdown.contains(target) && !button.contains(target)) {
+        setDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("click", handleClickOutside);
+    return () => {
+      document.removeEventListener("click", handleClickOutside);
+    };
+  }, [dropdownOpen]);
+
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background">
-      <div className="container flex h-16 items-center space-x-4 sm:justify-between sm:space-x-0">
-        <MainNav items={siteConfig.mainNav} />
+      <div className="container flex h-16 items-center space-x-4 sm:justify-between sm:space-x-0 bg-cyan-950 text-white">
+        <MainNav items={siteConfig.mainNav}/>
         <div className="flex flex-1 items-center justify-end space-x-4 relative">
           <nav className="flex items-center space-x-2">
             {isLoggedIn && (
               <div className="relative">
                 {/* 유저 정보 버튼 */}
                 <button
+                  id="dropdown-button"
                   onClick={() => setDropdownOpen(!dropdownOpen)}
-                  className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white-100 rounded-lg focus:outline-none"
+                  className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white-100 rounded-lg focus:outline-none text-white"
                 >
-                  <span>Hello {user?.user_metadata?.name || "User"}</span>
+                  <span>Hello, {user?.user_metadata?.name || "User"}</span>
                   {dropdownOpen ? <ChevronUp className="w-4 h-4 ml-2" /> : <ChevronDown className="w-4 h-4 ml-2" />}
                 </button>
 
                 {/* 드롭다운 메뉴 */}
                 {dropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white border rounded-lg shadow-lg">
+                  <div id="dropdown-menu" className="absolute right-0 mt-2 w-48 bg-white border rounded-lg shadow-lg">
                     <ul className="py-2 text-sm text-gray-700">
                       <li>
                         <a href="/profile" className="block px-4 py-2 hover:bg-gray-100">Profile</a>
                       </li>
                       <li>
-                        <a href="/subscription" className="block px-4 py-2 hover:bg-gray-100">Subcribe</a>
+                        <a href="/subscription" className="block px-4 py-2 hover:bg-gray-100">Subscribe</a>
                       </li>
                       <li>
                         <button
@@ -89,7 +109,6 @@ export function SiteHeader() {
                 )}
               </div>
             )}
-
             {isLoggedIn ? null : <LoginButton />}
           </nav>
         </div>

@@ -26,7 +26,7 @@ export async function POST(req: Request) {
         },
         {
           role: "user",
-          content: `Translate the following text from ${inputLanguage} to ${outputLanguage}: "${inputText}"`
+          content: `Translate the following text from ${inputLanguage} to ${outputLanguage}: ${inputText}`
         }
       ],
       temperature: 0.3,

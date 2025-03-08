@@ -86,7 +86,7 @@ export default function EmailLoginForm({
           emailRedirectTo: `${window.location.origin}/auth/callback`
         }
       })
-
+      
       if (error) {
         throw error
       }

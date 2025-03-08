@@ -1,4 +1,5 @@
 import { SiteHeader } from "@/components/site-header"
+import Footer from "@/components/footer"
 
 export default function AboutPage() {
   return (
@@ -66,6 +67,7 @@ export default function AboutPage() {
           </div>
         </section>
       </main>
+      <Footer/>
     </div>
   )
 }

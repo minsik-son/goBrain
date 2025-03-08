@@ -1,5 +1,6 @@
 import { Translator } from "@/components/translator"
 import { SiteHeader } from "@/components/site-header"
+import Footer from "@/components/footer"
 
 export default function Home() {
   return (
@@ -13,13 +14,7 @@ export default function Home() {
           <Translator />
         </section>
       </main>
-      <footer className="border-t py-6 md:py-0">
-        <div className="container flex flex-col items-center justify-between gap-4 md:h-16 md:flex-row">
-          <p className="text-center text-sm text-muted-foreground md:text-left">
-            &copy; {new Date().getFullYear()} AI Translator. All rights reserved.
-          </p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   )
 }
