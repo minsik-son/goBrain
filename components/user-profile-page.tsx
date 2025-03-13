@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Bell, CreditCard, FileText, Globe, Home, LogOut, Moon, Settings, Sun, User } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -9,6 +9,8 @@ import { Progress } from "@/components/ui/progress"
 import { Separator } from "@/components/ui/separator"
 import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import Link from "next/link"
+import { supabase } from "@/lib/supabaseClient"
 import {
   Sidebar,
   SidebarContent,
@@ -43,6 +45,11 @@ export function UserProfilePage() {
   const [darkMode, setDarkMode] = useState(false)
   const [activeTab, setActiveTab] = useState("profile")
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [avartarUrl, setAvatarUrl] = useState("")
+  const [userName, setUserName] = useState("")
+
+
+ 
 
   // Toggle dark mode
   const toggleDarkMode = () => {
@@ -56,8 +63,12 @@ export function UserProfilePage() {
         <div className="flex min-h-screen">
           <Sidebar>
             <SidebarHeader className="flex items-center gap-2 px-4 py-2">
-              <Globe className="h-6 w-6 text-primary" />
-              <div className="font-semibold text-lg">TranslateAI</div>
+            <Link href="/"> {/* Link 컴포넌트로 감싸기 */}
+                <div className="flex items-center gap-2 cursor-pointer"> {/* 클릭 가능하게 하기 위해 cursor-pointer 추가 */}
+                <Globe className="h-6 w-6 text-primary" />
+                <div className="font-semibold text-lg">TranslateAI</div>
+                </div>
+            </Link>
             </SidebarHeader>
             <SidebarContent>
               <SidebarGroup>
@@ -106,10 +117,10 @@ export function UserProfilePage() {
             </SidebarFooter>
           </Sidebar>
 
-          <div className="flex-1 p-6 md:p-8 overflow-auto">
+          <div className="flex-1 w-full p-6 md:p-8 overflow-auto">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h1 className="text-2xl font-bold">User Profile</h1>
+                <h1 className="text-2xl font-bold">Profile Name</h1>
                 <p className="text-muted-foreground">Manage your account and preferences</p>
               </div>
               <div className="flex items-center gap-4">
@@ -118,7 +129,7 @@ export function UserProfilePage() {
                   {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
                 </Button>
                 <Avatar>
-                  <AvatarImage src="/placeholder.svg?height=40&width=40" />
+                  <AvatarImage src="" />
                   <AvatarFallback>JD</AvatarFallback>
                 </Avatar>
               </div>

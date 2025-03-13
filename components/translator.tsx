@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Textarea } from "@/components/ui/textarea"
-
+import { useSession } from "next-auth/react"
 
 const languages = [
   { value: "detect", label: "Detect Language" },
@@ -163,7 +163,7 @@ export function Translator() {
       }
       /**
        * 
-       * 과제가 아닌 직접 배포를 할생각으로 개발을 하게되니 실무에서 일하는 기술들을 찾아보며 배우게 됬고 현업에서는 어떤 기술들이 트랜드인지 파악해ㅐ볼수있는 기회를 가졌습니다.
+       * 과제가 아닌 직접 배포를 할생각으로 개발을하게되니 실무에서 일하는 기술들을 찾아보며 배우게 됬고 현업에서는 어떤 기술들이 트랜드인지 파악해ㅐ볼수있는 기회를 가졌습니다.
        * 
        */
       // 현재 상태의 입력값 캡처
@@ -291,19 +291,22 @@ export function Translator() {
                 variant="outline"
                 role="combobox"
                 aria-expanded={inputOpen}
-                className="w-full justify-between"
+                className="w-full justify-between bg-background border border-input hover:bg-accent hover:text-accent-foreground"
               >
                 {inputLanguage.label}
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
               </Button>
             </PopoverTrigger>
-            {/**Input Language Popover */}
-            <PopoverContent className="w-full p-0">
-              <Command>
-                <CommandInput placeholder="Search language..." />
-                <CommandList>
+            <PopoverContent 
+              className="p-0 border border-input w-[var(--radix-popover-trigger-width)] min-w-[var(--radix-popover-trigger-width)]" 
+              align="start"
+              sideOffset={0}
+            >
+              <Command className="rounded-none">
+                <CommandInput placeholder="Search language..." className="h-9 rounded-none border-0 border-b focus:ring-0" />
+                <CommandList className="rounded-none">
                   <CommandEmpty>No language found.</CommandEmpty>
-                  <CommandGroup>
+                  <CommandGroup className="max-h-[300px] overflow-y-auto">
                     {getInputLanguages(outputLanguage.value).map((lang) => (
                       <CommandItem
                         key={lang.value}
@@ -312,6 +315,7 @@ export function Translator() {
                           setInputLanguage(lang)
                           setInputOpen(false)
                         }}
+                        className="flex items-center py-1.5 px-2 text-sm aria-selected:bg-accent aria-selected:text-accent-foreground"
                       >
                         <Check
                           className={cn(
@@ -341,19 +345,22 @@ export function Translator() {
                 variant="outline"
                 role="combobox"
                 aria-expanded={outputOpen}
-                className="w-full justify-between"
+                className="w-full justify-between bg-background border border-input hover:bg-accent hover:text-accent-foreground"
               >
                 {outputLanguage.label}
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
               </Button>
             </PopoverTrigger>
-            {/**Output Language Popover */}
-            <PopoverContent className="w-full p-0">
-              <Command>
-                <CommandInput placeholder="Search language..." />
-                <CommandList>
+            <PopoverContent 
+              className="p-0 border border-input w-[var(--radix-popover-trigger-width)] min-w-[var(--radix-popover-trigger-width)]" 
+              align="start"
+              sideOffset={0}
+            >
+              <Command className="rounded-none">
+                <CommandInput placeholder="Search language..." className="h-9 rounded-none border-0 border-b focus:ring-0" />
+                <CommandList className="rounded-none">
                   <CommandEmpty>No language found.</CommandEmpty>
-                  <CommandGroup>
+                  <CommandGroup className="max-h-[300px] overflow-y-auto">
                     {getOutputLanguages(inputLanguage.value).map((lang) => (
                       <CommandItem
                         key={lang.value}
@@ -362,6 +369,7 @@ export function Translator() {
                           setOutputLanguage(lang)
                           setOutputOpen(false)
                         }}
+                        className="flex items-center py-1.5 px-2 text-sm aria-selected:bg-accent aria-selected:text-accent-foreground"
                       >
                         <Check
                           className={cn(
