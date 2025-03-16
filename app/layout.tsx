@@ -4,6 +4,8 @@ import type { Metadata } from 'next'
 import './globals.css'
 import { supabase } from '@/lib/supabaseClient'
 import { useEffect, useState } from 'react'
+import { AuthProvider } from "@/lib/contexts/auth-context";
+import { UserProvider } from "@/lib/contexts/user-context";
 
 /*
 export const metadata: Metadata = {
@@ -39,7 +41,13 @@ export default function RootLayout({
 
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <AuthProvider>
+          <UserProvider>
+            {children}
+          </UserProvider>
+        </AuthProvider>
+      </body>
     </html>
   )
 }
