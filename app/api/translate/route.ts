@@ -1,5 +1,6 @@
 import { OpenAI } from "openai";
 import { NextResponse } from "next/server";
+import { langCodeToName } from "@/lib/utils/language-utils";
 
 // Initialize OpenAI client with API key from environment variables
 const openai = new OpenAI({
@@ -8,37 +9,56 @@ const openai = new OpenAI({
 
 export async function POST(req: Request) {
   try {
-    const { inputText, inputLanguage, outputLanguage } = await req.json();
+    const { inputText, inputLanguage, outputLanguage, detectedLanguageInfo } = await req.json();
 
-    if (!inputText || !inputLanguage || !outputLanguage) {
+    if (!inputText || !outputLanguage) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        { error: "필수 필드가 누락되었습니다" },
         { status: 400 }
       );
     }
 
+    // 입력 언어 결정 (detectedLanguageInfo가 있으면 사용)
+    let effectiveInputLanguage = inputLanguage;
+    let detectedLanguage = null;
+    
+    if (detectedLanguageInfo && inputLanguage === "Detect Language") {
+      detectedLanguage = detectedLanguageInfo;
+      const detectedCode = detectedLanguageInfo.code;
+      effectiveInputLanguage = langCodeToName[detectedCode] || detectedLanguageInfo.name;
+      console.log(`클라이언트에서 전달받은 감지 언어로 번역: ${effectiveInputLanguage}`);
+    }
+
+    // 번역 실행
+    const messages = [
+      {
+        role: "system",
+        content: "정확하고 자연스럽게 번역해주세요. 번역된 텍스트만 반환하고 다른 설명이나 주석은 포함하지 마세요."
+      },
+      {
+        role: "user",
+        content: `다음 텍스트를 ${effectiveInputLanguage}에서 ${outputLanguage}로 번역해주세요: ${inputText}`
+      }
+    ];
+
     const response = await openai.chat.completions.create({
       model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "system",
-          content: "You are a professional translator. Translate the text accurately and naturally. Only return the translated text without any additional comments or explanations."
-        },
-        {
-          role: "user",
-          content: `Translate the following text from ${inputLanguage} to ${outputLanguage}: ${inputText}`
-        }
-      ],
-      temperature: 0.3,
+      messages,
+      temperature: 0.1,
     });
 
-    const translatedText = response.choices[0]?.message.content || "";
+    const translatedText = response.choices[0].message.content || "";
 
-    return NextResponse.json({ text: translatedText });
+    // 번역 결과와 감지 정보 반환
+    return NextResponse.json({
+      text: translatedText,
+      detectedLanguage,
+      effectiveInputLanguage
+    });
   } catch (error) {
-    console.error("Translation API error:", error);
+    console.error("번역 API 오류:", error);
     return NextResponse.json(
-      { error: "Error processing translation" },
+      { error: "번역 처리 중 오류가 발생했습니다" },
       { status: 500 }
     );
   }

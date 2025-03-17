@@ -1,15 +1,10 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
 import { useAuth } from "@/lib/contexts/auth-context"
 import { useUser } from "@/lib/contexts/user-context"
-import { 
-  Languages, Image, FileText, RotateCcw, X, Volume2, 
-  File, Star, Share2, ChevronDown, CheckCircle2, Copy 
-} from "lucide-react"
-import { franc } from "franc-min"
-import { cn } from "@/lib/utils"
+import { Languages, Image, FileText, RotateCcw, X, Volume2, Star, Share2, ChevronDown, CheckCircle2, Copy } from "lucide-react"
+import { extractDetectedLanguage } from "@/components/detectLanguageAPI"
 
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -28,100 +23,160 @@ const languages = [
   { code: "zh", name: "Chinese" },
   { code: "ko", name: "Korean" },
   { code: "ar", name: "Arabic" },
+  { code: "vi", name: "Vietnamese" },
+  { code: "th", name: "Thai" },
+  { code: "hi", name: "Hindi" },
+  { code: "tr", name: "Turkish" },
+  { code: "id", name: "Indonesian" },
 ]
 
-// 언어 그룹 정의
-const languageGroups = [
-  { name: "Popular", languages: ["detect", "en", "es", "fr", "de", "zh", "ja", "ko"] },
-  { name: "All Languages", languages: languages.map(l => l.code) }
-]
+// 번역 결과에서 불필요한 텍스트 제거 함수
+const cleanTranslationResult = (text: string): string => {
+  const prefixPattern = /^(?:The language of the input text is [^.]+\.\s*)?(?:The translation (?:from [^ ]+ )?to [^ ]+ is:?\s*)?/i;
+  const cleanedText = text.replace(prefixPattern, '');
+  return cleanedText.replace(/^["']|["']$/g, '').trim();
+};
 
-// franc에서 사용하는 코드와 UI에서 사용하는 코드 간의 매핑
-const codeToLabelMap: Record<string, string> = {
-  eng: "en",
-  spa: "es",
-  fra: "fr",
-  deu: "de",
-  ita: "it",
-  por: "pt",
-  rus: "ru",
-  jpn: "ja",
-  cmn: "zh",
-  kor: "ko",
-  ara: "ar",
-}
+// 간단한 클라이언트 측 언어 감지 함수
+const simpleDetectLanguage = (text) => {
+  const patterns = {
+    'en': /^[a-zA-Z\s.,!?'"-]+$/,
+    'ko': /[\uAC00-\uD7AF]/,
+    'ja': /[\u3040-\u309F\u30A0-\u30FF]/,
+    'zh': /[\u4E00-\u9FFF]/,
+    'es': /[áéíóúüñ¿¡]/i,
+    'fr': /[àâäæçéèêëîïôœùûüÿ]/i,
+    'de': /[äöüß]/i,
+    'ru': /[а-яА-ЯёЁ]/
+  };
+  
+  for (const [code, pattern] of Object.entries(patterns)) {
+    if (pattern.test(text)) {
+      const langNames = {
+        'en': 'English',
+        'ko': 'Korean',
+        'ja': 'Japanese',
+        'zh': 'Chinese',
+        'es': 'Spanish',
+        'fr': 'French',
+        'de': 'German',
+        'ru': 'Russian'
+      };
+      return { code, name: langNames[code] };
+    }
+  }
+  
+  return { code: 'en', name: 'English' }; // 기본값
+};
 
 export function Translator() {
-  // 탭 관련 상태
   const [activeTab, setActiveTab] = useState("text")
-  
-  // 언어 선택 관련 상태
   const [sourceLanguage, setSourceLanguage] = useState("detect")
   const [targetLanguage, setTargetLanguage] = useState("en")
   const [showSourceLanguageDropdown, setShowSourceLanguageDropdown] = useState(false)
   const [showTargetLanguageDropdown, setShowTargetLanguageDropdown] = useState(false)
-  
-  // 텍스트 관련 상태
   const [sourceText, setSourceText] = useState("")
   const [translatedText, setTranslatedText] = useState("")
   const [characterCount, setCharacterCount] = useState(0)
   const [isTranslating, setIsTranslating] = useState(false)
-  const [isCopied, setIsCopied] = useState(false)
-  
-  // 사용량 및 오류 상태
+  const [sourceTextCopied, setSourceTextCopied] = useState(false)
+  const [translatedTextCopied, setTranslatedTextCopied] = useState(false)
   const [usageStats, setUsageStats] = useState<{
     limit: number
     used: number
     remaining: number
   } | null>(null)
   const [error, setError] = useState<string | null>(null)
-  
-  // 텍스트 영역 참조
+  const [detectedLanguageCode, setDetectedLanguageCode] = useState<string | null>(null)
+  const [detectedLanguageName, setDetectedLanguageName] = useState<string | null>(null)
+  const [languageMismatch, setLanguageMismatch] = useState<{
+    detected: string
+    detectedCode: string
+    current: string
+  } | null>(null)
+
   const sourceTextareaRef = useRef<HTMLTextAreaElement>(null)
   const targetTextareaRef = useRef<HTMLTextAreaElement>(null)
-  
-  // 번역 요청 관리를 위한 참조
   const currentInputRef = useRef<string>("")
   const abortControllerRef = useRef<AbortController | null>(null)
   const isTranslatingRef = useRef<boolean>(false)
-  
-  // 사용자 정보 가져오기
+
   const { user } = useAuth()
   const { profile } = useUser()
   const isPremium = profile?.plan === "premium" || profile?.plan === "business"
-  
-  // 최대 입력 글자 수 (플랜에 따라 다름)
+
   const getMaxInputLength = () => {
-    if (!profile) return 1000 // 기본값
+    if (!profile) return 10000
     switch(profile.plan) {
       case 'premium': return 3000
       case 'business': return 5000
-      default: return 1000
+      default: return 10000
     }
   }
-  
+
   const maxInputLength = getMaxInputLength()
-  
-  // 입력 텍스트 변경 시 처리
+
   const handleSourceTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const text = e.target.value
-    if (text.length > maxInputLength) return // 최대 길이 제한
-    
+    if (text.length > maxInputLength) return
     setSourceText(text)
     setCharacterCount(text.length)
-    
-    // 입력값이 비어있으면 출력값도 초기화
     if (text === "") {
       setTranslatedText("")
-      
-      // 진행 중인 번역 요청 취소
       if (abortControllerRef.current) {
         abortControllerRef.current.abort()
         abortControllerRef.current = null
       }
     }
   }
-  
+
+  // 실시간 언어 감지 최적화 (입력이 멈추면 언어 감지 실행)
+  useEffect(() => {
+    // 이미 감지된 언어가 있거나 텍스트가 너무 짧으면 실행 안함
+    if (sourceLanguage !== "detect" || sourceText.trim().length < 4) {
+      return;
+    }
+    
+    const debounceTimeout = setTimeout(async () => {
+      // 이미 번역 중이면 언어 감지 스킵
+      if (isTranslatingRef.current) return;
+      
+      try {
+        const response = await fetch('/api/detect-language', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ text: sourceText }),
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log("언어 감지 결과:", data);
+          
+          if (data.detectedLanguage && data.detectedLanguage.code) {
+            setDetectedLanguageCode(data.detectedLanguage.code);
+            setDetectedLanguageName(data.detectedLanguage.name);
+            console.log(`실시간 언어 감지: ${data.detectedLanguage.name}`);
+          }
+        } else {
+          console.log("API 오류, 클라이언트 측 감지 사용");
+          const detected = simpleDetectLanguage(sourceText);
+          setDetectedLanguageCode(detected.code);
+          setDetectedLanguageName(detected.name);
+        }
+      } catch (error) {
+        console.error("언어 감지 API 오류:", error);
+        // 백업 방법 사용
+        const detected = simpleDetectLanguage(sourceText);
+        setDetectedLanguageCode(detected.code);
+        setDetectedLanguageName(detected.name);
+      }
+    }, 800); // 텍스트 입력이 멈춘 후 800ms 기다림
+    
+    return () => clearTimeout(debounceTimeout);
+  }, [sourceText, sourceLanguage]);
+
   // Debounce를 통한 자동 번역
   useEffect(() => {
     const debounceTimeout = setTimeout(() => {
@@ -131,218 +186,216 @@ export function Translator() {
     }, 500)
     return () => clearTimeout(debounceTimeout)
   }, [sourceText, sourceLanguage, targetLanguage])
-  
-  // 언어 스왑 핸들러
+
+  // 언어 스왑 핸들러 (감지 모드에서는 동작하지 않음)
   const handleSwapLanguages = () => {
-    // 감지 언어일 경우 스왑 안함
     if (sourceLanguage === "detect") return
-    
     const temp = sourceLanguage
     setSourceLanguage(targetLanguage)
     setTargetLanguage(temp)
-    
-    // 텍스트도 스왑
     setSourceText(translatedText)
     setTranslatedText(sourceText)
     setCharacterCount(translatedText.length)
   }
-  
-  // 텍스트 초기화 핸들러
+
   const handleClearText = () => {
     setSourceText("")
     setTranslatedText("")
     setCharacterCount(0)
-    
-    // 진행 중인 번역 요청 취소
     if (abortControllerRef.current) {
       abortControllerRef.current.abort()
       abortControllerRef.current = null
     }
   }
-  
-  // 번역 텍스트 복사 핸들러
-  const handleCopyTranslation = async () => {
-    if (!translatedText) return
+
+  const handleCopyText = async (text: string, isSource: boolean = false) => {
+    if (!text) return
     try {
-      await navigator.clipboard.writeText(translatedText)
-      setIsCopied(true)
-      setTimeout(() => setIsCopied(false), 2000)
+      await navigator.clipboard.writeText(text)
+      if (isSource) {
+        setSourceTextCopied(true)
+        setTimeout(() => setSourceTextCopied(false), 2000)
+      } else {
+        setTranslatedTextCopied(true)
+        setTimeout(() => setTranslatedTextCopied(false), 2000)
+      }
     } catch (err) {
-      console.error("Failed to copy text:", err)
+      console.error("텍스트 복사 실패:", err)
     }
   }
-  
-  // 번역 저장 핸들러 (미구현)
+
+  const handleCopyTranslation = () => {
+    handleCopyText(translatedText, false)
+  }
+
   const handleSaveTranslation = () => {
-    // TODO: 번역 저장 기능 구현
     console.log("Save translation:", { sourceText, translatedText, sourceLanguage, targetLanguage })
   }
 
-  // prevnetSameLanguage 함수 추가
-  const prevnetSameLanguage = () => {
-    if (sourceLanguage === targetLanguage) {
-      // 기본값 설정
+  // 같은 언어 선택 방지를 위한 처리
+  useEffect(() => {
+    preventSameLanguage();
+  }, [sourceLanguage, targetLanguage]);
+
+  const preventSameLanguage = () => {
+    if (sourceLanguage === targetLanguage && sourceLanguage !== "detect") {
       if (sourceLanguage === "en") {
-        setTargetLanguage("es");
+        setTargetLanguage("ko");
+      } else if (sourceLanguage === "ko") {
+        setTargetLanguage("en");
+      } else if (sourceLanguage === "es") {
+        setTargetLanguage("en");
+      } else if (sourceLanguage === "ja") {
+        setTargetLanguage("ko");
       } else {
         setTargetLanguage("en");
       }
     }
   };
 
-  // 언어 선택 핸들러 수정
   const handleSourceLanguageChange = (langCode: string) => {
     setSourceLanguage(langCode);
-    prevnetSameLanguage(); // 언어 변경 후 호출
+    preventSameLanguage();
   };
 
   const handleTargetLanguageChange = (langCode: string) => {
     setTargetLanguage(langCode);
-    prevnetSameLanguage(); // 언어 변경 후 호출
+    preventSameLanguage();
   };
 
-  // 언어 감지 함수 추가
-  const detectLanguage = (text: string) => {
-    if (!text.trim()) return;
-    
-    const detectedCode = franc(text);
-    if (detectedCode !== "und" && codeToLabelMap[detectedCode]) {
-      const mappedCode = codeToLabelMap[detectedCode];
-      console.log(`Detected language: ${mappedCode}`);
-      
-      // 감지된 언어와 타겟 언어가 같으면 서로 다른 언어 선택
-      if (mappedCode === targetLanguage) {
-        setTargetLanguage(mappedCode === "en" ? "ko" : "en");
-      }
-      
-      // 감지된 언어로 소스 설정
-      if (sourceLanguage === "detect") {
-        const detectedLang = languages.find(l => l.code === mappedCode);
-        if (detectedLang) {
-          console.log(`Setting source language to ${detectedLang.name}`);
-        }
-      }
-    }
-  };
-  
-  // 번역 함수 완전 구현
+  // 번역 함수 개선
   const translateText = async () => {
     if (!sourceText.trim()) {
       setTranslatedText("");
       return;
     }
-
+    
+    setIsTranslating(true);
+    setError(null);
+    
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    
+    abortControllerRef.current = new AbortController();
+    currentInputRef.current = sourceText;
+    
     try {
-      // 이전 번역 요청 취소
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
+      // 1. "detect" 모드일 경우 먼저 언어 감지
+      let detectedLanguageInfo = null;
       
-      // 새로운 AbortController 생성
-      abortControllerRef.current = new AbortController();
-      
-      setIsTranslating(true);
-      isTranslatingRef.current = true;
-      setError(null);
-      
-      // 현재 입력값 저장
-      currentInputRef.current = sourceText;
-
-      // 언어 감지 기능
-      let inputLang = sourceLanguage;
       if (sourceLanguage === "detect") {
-        const detectedCode = franc(sourceText);
-        if (detectedCode !== "und" && codeToLabelMap[detectedCode]) {
-          inputLang = codeToLabelMap[detectedCode];
-          console.log(`감지된 언어: ${inputLang}`);
-        } else {
-          inputLang = "en"; // 기본값
-        }
+        // 서버 API 호출 대신 클라이언트 측 감지만 사용
+        const detected = simpleDetectLanguage(sourceText);
+        setDetectedLanguageCode(detected.code);
+        setDetectedLanguageName(detected.name);
+        
+        // 감지된 정보로 번역 진행
+        detectedLanguageInfo = {
+          code: detected.code,
+          name: detected.name,
+          confidence: 0.8
+        };
       }
-
-      // 언어 코드를 전체 언어 이름으로 변환
-      const inputLanguageName = languages.find(l => l.code === inputLang)?.name || "English";
+      
+      // 2. 언어 이름 준비
+      const inputLanguageName = sourceLanguage === "detect" 
+        ? "Detect Language" 
+        : languages.find(l => l.code === sourceLanguage)?.name || "English";
+      
       const outputLanguageName = languages.find(l => l.code === targetLanguage)?.name || "English";
-
-      // API 호출
+      
+      // 3. 번역 API 호출
       const response = await fetch('/api/translate', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           inputText: sourceText,
           inputLanguage: inputLanguageName,
-          outputLanguage: outputLanguageName
+          outputLanguage: outputLanguageName,
+          detectedLanguageInfo // 감지된 언어 정보 전달
         }),
         signal: abortControllerRef.current.signal
       });
       
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || '번역 중 오류가 발생했습니다');
+      const data = await response.json();
+      console.log("번역 API 응답:", data);
+      
+      // 4. 번역 결과 처리
+      const cleanedTranslation = cleanTranslationResult(data.text);
+      setTranslatedText(cleanedTranslation);
+      
+      // 5. 언어 불일치 확인 (감지된 언어와 선택된 언어가 다른 경우)
+      if (sourceLanguage !== "detect" && data.detectedLanguage) {
+        const detectedCode = data.detectedLanguage.code;
+        const detectedName = data.detectedLanguage.name;
+        
+        if (detectedCode && sourceLanguage !== detectedCode) {
+          const selectedLangName = languages.find(l => l.code === sourceLanguage)?.name || sourceLanguage;
+          
+          setLanguageMismatch({
+            detected: detectedName,
+            detectedCode: detectedCode,
+            current: selectedLangName
+          });
+        } else {
+          setLanguageMismatch(null);
+        }
       }
       
-      const data = await response.json();
-      
-      // 입력값이 변경되었는지 확인 (중간에 사용자가 입력을 변경한 경우)
-      if (currentInputRef.current !== sourceText) return;
-      
-      setTranslatedText(data.text);
-      
-      // 사용량 통계 업데이트 (실제 데이터가 있을 경우)
-      if (data.usage) {
-        setUsageStats(data.usage);
-      } else {
-        // 임시 사용량 데이터 (실제 구현에서는 서버에서 제공)
-        setUsageStats({
-          limit: maxInputLength,
-          used: characterCount,
-          remaining: maxInputLength - characterCount
-        });
+      // 6. 사용량 통계 업데이트 (있는 경우)
+      if (data.usageStats) {
+        setUsageStats(data.usageStats);
       }
     } catch (err) {
-      // 요청이 취소된 경우는 오류로 처리하지 않음
-      if (err instanceof Error && err.name === 'AbortError') {
-        console.log('번역 요청이 취소되었습니다');
-        return;
+      if (err.name !== 'AbortError') {
+        console.error("번역 오류:", err);
+        setError("번역 중 오류가 발생했습니다. 다시 시도해주세요.");
       }
-      
-      console.error('번역 오류:', err);
-      setError(err instanceof Error ? err.message : '번역 중 오류가 발생했습니다');
-      setTranslatedText(""); // 오류 발생 시 번역 결과 초기화
     } finally {
       setIsTranslating(false);
-      isTranslatingRef.current = false;
     }
   };
   
-  // 언어 드롭다운 외부 클릭 시 닫기
+  // 드롭다운 외부 클릭 시 닫기
   useEffect(() => {
     if (showSourceLanguageDropdown || showTargetLanguageDropdown) {
       const handleClickOutside = (e: MouseEvent) => {
         const target = e.target as HTMLElement;
-        // dropdown-trigger 클래스를 가진 요소는 외부 클릭으로 간주하지 않음
         if (!target.closest('.dropdown-content') && !target.closest('.dropdown-trigger')) {
           setShowSourceLanguageDropdown(false);
           setShowTargetLanguageDropdown(false);
         }
       };
-      
-      // 이벤트 리스너 등록
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
   }, [showSourceLanguageDropdown, showTargetLanguageDropdown]);
 
+  // textarea 높이 자동 조정 및 동기화
+  useEffect(() => {
+    const adjustTextareaHeight = () => {
+      if (sourceTextareaRef.current && targetTextareaRef.current) {
+        sourceTextareaRef.current.style.height = 'auto';
+        targetTextareaRef.current.style.height = 'auto';
+        const sourceScrollHeight = sourceTextareaRef.current.scrollHeight;
+        const targetScrollHeight = targetTextareaRef.current.scrollHeight;
+        const minHeight = 300;
+        const sourceHeight = Math.max(sourceScrollHeight, minHeight);
+        const targetHeight = Math.max(targetScrollHeight, minHeight);
+        const maxHeight = Math.max(sourceHeight, targetHeight);
+        sourceTextareaRef.current.style.height = `${maxHeight}px`;
+        targetTextareaRef.current.style.height = `${maxHeight}px`;
+      }
+    };
+    adjustTextareaHeight();
+    window.addEventListener('resize', adjustTextareaHeight);
+    return () => window.removeEventListener('resize', adjustTextareaHeight);
+  }, [sourceText, translatedText]);
+
   return (
     <div className="w-full max-w-6xl mx-auto bg-white rounded-xl shadow-sm border">
-      <Tabs
-        defaultValue="text"
-        value={activeTab}
-        onValueChange={setActiveTab}
-        className="w-full"
-      >
+      <Tabs defaultValue="text" value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid grid-cols-3 mb-2">
           <TabsTrigger value="text" className="flex items-center gap-2">
             <Languages className="h-4 w-4" />
@@ -362,45 +415,48 @@ export function Translator() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
             {/* Source Text */}
             <div className="border-r relative">
-              {/* Source Language Selector */}
               <div className="p-3 border-b flex justify-between items-center h-14 relative">
                 <div className="relative">
                   <button
                     type="button"
-                    className="dropdown-trigger flex items-center gap-1 text-sm font-medium" 
+                    className="dropdown-trigger flex items-center gap-1 text-sm font-medium"
                     onClick={(e) => {
-                      e.stopPropagation(); // 이벤트 버블링 방지
+                      e.stopPropagation();
                       setShowSourceLanguageDropdown(!showSourceLanguageDropdown);
                       setShowTargetLanguageDropdown(false);
                     }}
                   >
-                    {languages.find((l) => l.code === sourceLanguage)?.name || "소스 언어"}
-                    <ChevronDown className={`h-4 w-4 ml-1 transition-transform ${showSourceLanguageDropdown ? "rotate-180" : ""}`} />
+                    {sourceLanguage === "detect" ? (
+                      <>
+                        {detectedLanguageName ? (
+                          <span className="flex items-center">
+                            감지됨: <span className="font-medium text-green-600 ml-1">{detectedLanguageName}</span>
+                          </span>
+                        ) : (
+                          "언어 감지"
+                        )}
+                        <ChevronDown className={`h-4 w-4 ml-1 transition-transform ${showSourceLanguageDropdown ? "rotate-180" : ""}`} />
+                      </>
+                    ) : (
+                      <>
+                        {languages.find((l) => l.code === sourceLanguage)?.name || "소스 언어"}
+                        <ChevronDown className={`h-4 w-4 ml-1 transition-transform ${showSourceLanguageDropdown ? "rotate-180" : ""}`} />
+                      </>
+                    )}
                   </button>
                 </div>
-
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleSwapLanguages}
-                  className="h-8 w-8"
-                >
+                <Button variant="ghost" size="icon" onClick={handleSwapLanguages} className="h-8 w-8">
                   <RotateCcw className="h-4 w-4" />
                 </Button>
               </div>
 
-              {/* 소스 언어 드롭다운 메뉴 - 높이 자동 조정 */}
               {showSourceLanguageDropdown && (
                 <div 
                   className="dropdown-content absolute top-[56px] left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50"
-                  style={{ 
-                    maxHeight: '400px',
-                    overflowY: 'auto'
-                  }}
-                  onClick={(e) => e.stopPropagation()} // 내부 클릭 이벤트 버블링 방지
+                  style={{ maxHeight: '400px', overflowY: 'auto' }}
+                  onClick={(e) => e.stopPropagation()}
                 >
                   <div className="grid grid-cols-3 p-4 gap-2">
-                    {/* 언어 감지 옵션 */}
                     <button
                       type="button"
                       className={`text-left p-3 text-sm rounded-md ${
@@ -409,20 +465,16 @@ export function Translator() {
                           : "border border-gray-200 hover:bg-gray-50"
                       }`}
                       onClick={(e) => {
-                        e.stopPropagation(); // 이벤트 버블링 방지
+                        e.stopPropagation();
                         setSourceLanguage("detect");
                         setShowSourceLanguageDropdown(false);
                       }}
                     >
                       <span className="flex items-center">
-                        {sourceLanguage === "detect" && (
-                          <span className="text-green-500 mr-2">✓</span>
-                        )}
+                        {sourceLanguage === "detect" && <span className="text-green-500 mr-2">✓</span>}
                         언어 감지
                       </span>
                     </button>
-                    
-                    {/* 나머지 언어 옵션 */}
                     {languages
                       .filter(lang => lang.code !== "detect")
                       .map((lang) => (
@@ -435,18 +487,14 @@ export function Translator() {
                               : "border border-gray-200 hover:bg-gray-50"
                           }`}
                           onClick={(e) => {
-                            handleSourceLanguageChange(lang.code); // 수정된 핸들러 사용
+                            e.stopPropagation();
+                            handleSourceLanguageChange(lang.code);
                             setShowSourceLanguageDropdown(false);
-                            
-                            if (sourceText) {
-                              translateText();
-                            }
+                            if (sourceText) translateText();
                           }}
                         >
                           <span className="flex items-center">
-                            {sourceLanguage === lang.code && (
-                              <span className="text-green-500 mr-2">✓</span>
-                            )}
+                            {sourceLanguage === lang.code && <span className="text-green-500 mr-2">✓</span>}
                             {lang.name}
                           </span>
                         </button>
@@ -455,7 +503,6 @@ export function Translator() {
                 </div>
               )}
 
-              {/* Source Text Area */}
               <div className="relative">
                 {sourceText && (
                   <button
@@ -468,18 +515,15 @@ export function Translator() {
                 <textarea
                   ref={sourceTextareaRef}
                   placeholder="번역할 텍스트를 입력하세요"
-                  className="w-full p-4 min-h-[300px] resize-none border-0 focus:ring-0 focus:outline-none"
+                  className="w-full p-4 pb-16 min-h-[300px] resize-none border-0 focus:ring-0 focus:outline-none"
                   value={sourceText}
                   onChange={handleSourceTextChange}
                   maxLength={maxInputLength}
                 />
-
-                {/* Character count and action buttons */}
                 <div className="absolute bottom-3 left-3 right-3 flex justify-between items-center">
                   <div className="text-xs text-gray-500">
                     {characterCount} / {maxInputLength}
                   </div>
-
                   {sourceText && (
                     <div className="flex gap-2">
                       <button className="text-gray-500 hover:text-gray-700">
@@ -487,9 +531,13 @@ export function Translator() {
                       </button>
                       <button 
                         className="text-gray-500 hover:text-gray-700"
-                        onClick={() => navigator.clipboard.writeText(sourceText)}
+                        onClick={() => handleCopyText(sourceText, true)}
                       >
-                        <File className="h-5 w-5" />
+                        {sourceTextCopied ? (
+                          <CheckCircle2 className="h-5 w-5 text-green-500" />
+                        ) : (
+                          <Copy className="h-5 w-5" />
+                        )}
                       </button>
                     </div>
                   )}
@@ -499,14 +547,13 @@ export function Translator() {
 
             {/* Translated Text */}
             <div className="relative">
-              {/* Target Language Selector */}
               <div className="p-3 border-b flex justify-between items-center h-14 relative">
                 <div className="relative">
                   <button
                     type="button"
                     className="dropdown-trigger flex items-center gap-1 text-sm font-medium"
                     onClick={(e) => {
-                      e.stopPropagation(); // 이벤트 버블링 방지
+                      e.stopPropagation();
                       setShowTargetLanguageDropdown(!showTargetLanguageDropdown);
                       setShowSourceLanguageDropdown(false);
                     }}
@@ -515,24 +562,13 @@ export function Translator() {
                     <ChevronDown className={`h-4 w-4 ml-1 transition-transform ${showTargetLanguageDropdown ? "rotate-180" : ""}`} />
                   </button>
                 </div>
-
-                <div className="flex items-center">
-                  <span className="text-xs text-gray-500 mr-2">자동</span>
-                  <div className="w-10 h-5 bg-gray-200 rounded-full relative">
-                    <div className="absolute right-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow"></div>
-                  </div>
-                </div>
               </div>
 
-              {/* 타겟 언어 드롭다운 메뉴 - 높이 자동 조정 */}
               {showTargetLanguageDropdown && (
                 <div 
                   className="dropdown-content absolute top-[56px] left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50"
-                  style={{ 
-                    maxHeight: '400px',
-                    overflowY: 'auto'
-                  }}
-                  onClick={(e) => e.stopPropagation()} // 내부 클릭 이벤트 버블링 방지
+                  style={{ maxHeight: '400px', overflowY: 'auto' }}
+                  onClick={(e) => e.stopPropagation()}
                 >
                   <div className="grid grid-cols-3 p-4 gap-2">
                     {languages
@@ -547,18 +583,14 @@ export function Translator() {
                               : "border border-gray-200 hover:bg-gray-50"
                           }`}
                           onClick={(e) => {
-                            handleTargetLanguageChange(lang.code); // 수정된 핸들러 사용
+                            e.stopPropagation();
+                            handleTargetLanguageChange(lang.code);
                             setShowTargetLanguageDropdown(false);
-                            
-                            if (sourceText) {
-                              translateText();
-                            }
+                            if (sourceText) translateText();
                           }}
                         >
                           <span className="flex items-center">
-                            {targetLanguage === lang.code && (
-                              <span className="text-green-500 mr-2">✓</span>
-                            )}
+                            {targetLanguage === lang.code && <span className="text-green-500 mr-2">✓</span>}
                             {lang.name}
                           </span>
                         </button>
@@ -567,17 +599,14 @@ export function Translator() {
                 </div>
               )}
 
-              {/* Target Text Area */}
               <div className="relative">
                 <textarea
                   ref={targetTextareaRef}
                   readOnly
                   placeholder={isTranslating ? "번역 중..." : "번역 결과가 여기에 표시됩니다"}
-                  className="w-full p-4 min-h-[300px] resize-none border-0 focus:ring-0 focus:outline-none bg-white"
+                  className="w-full p-4 pb-16 min-h-[300px] resize-none border-0 focus:ring-0 focus:outline-none bg-white"
                   value={translatedText}
                 />
-
-                {/* Action buttons */}
                 {translatedText && (
                   <div className="absolute bottom-3 right-3 flex gap-3">
                     <button className="text-gray-500 hover:text-gray-700">
@@ -585,9 +614,13 @@ export function Translator() {
                     </button>
                     <button
                       className="text-gray-500 hover:text-gray-700"
-                      onClick={handleCopyTranslation}
+                      onClick={() => handleCopyText(translatedText, false)}
                     >
-                      <File className="h-5 w-5" />
+                      {translatedTextCopied ? (
+                        <CheckCircle2 className="h-5 w-5 text-green-500" />
+                      ) : (
+                        <Copy className="h-5 w-5" />
+                      )}
                     </button>
                     <button
                       className="text-gray-500 hover:text-gray-700"
@@ -604,17 +637,33 @@ export function Translator() {
             </div>
           </div>
           
-          {/* Error Messages */}
           {error && (
             <div className="bg-red-50 text-red-500 p-3 m-3 rounded-md text-sm">
               {error}
             </div>
           )}
 
-          {/* Usage Statistics */}
           {usageStats && (
             <div className="text-xs text-gray-500 p-3 border-t">
               일일 번역 사용량: {usageStats.used}/{usageStats.limit} (남은 횟수: {usageStats.remaining})
+            </div>
+          )}
+
+          {languageMismatch && (
+            <div className="bg-yellow-50 text-yellow-800 p-3 my-2 rounded-md text-sm flex justify-between items-center">
+              <div>
+                입력된 텍스트는 {languageMismatch.current}가 아닌 {languageMismatch.detected}로 감지되었습니다.
+              </div>
+              <button
+                className="text-sm bg-yellow-100 hover:bg-yellow-200 text-yellow-800 px-2 py-1 rounded"
+                onClick={() => {
+                  setSourceLanguage(languageMismatch.detectedCode);
+                  setLanguageMismatch(null);
+                  if (sourceText) translateText();
+                }}
+              >
+                {languageMismatch.detected}로 변경
+              </button>
             </div>
           )}
         </TabsContent>
