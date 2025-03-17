@@ -25,11 +25,11 @@ export async function POST(req: Request) {
       messages: [
         {
           role: "system",
-          content: "주어진 텍스트의 언어를 감지하고 ISO 639-1 코드와 언어 이름을 간단히 알려주세요."
+          content: "Detect the language of the given text and provide the ISO 639-1 code and language name briefly."
         },
         {
           role: "user",
-          content: `다음 텍스트가 무슨 언어인지 알려주세요: "${promptText}"`
+          content: `What language is this text?: "${promptText}"`
         }
       ],
       temperature: 0.1,

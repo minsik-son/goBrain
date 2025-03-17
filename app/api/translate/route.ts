@@ -33,11 +33,11 @@ export async function POST(req: Request) {
     const messages = [
       {
         role: "system",
-        content: "정확하고 자연스럽게 번역해주세요. 번역된 텍스트만 반환하고 다른 설명이나 주석은 포함하지 마세요."
+        content: "Translate the text accurately and naturally. Only return the translated text without any explanations or comments."
       },
       {
         role: "user",
-        content: `다음 텍스트를 ${effectiveInputLanguage}에서 ${outputLanguage}로 번역해주세요: ${inputText}`
+        content: `Translate the following text from ${effectiveInputLanguage} to ${outputLanguage}: ${inputText}`
       }
     ];
 

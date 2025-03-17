@@ -232,35 +232,60 @@ export function Translator() {
     console.log("Save translation:", { sourceText, translatedText, sourceLanguage, targetLanguage })
   }
 
-  // 같은 언어 선택 방지를 위한 처리
-  useEffect(() => {
-    preventSameLanguage();
-  }, [sourceLanguage, targetLanguage]);
-
-  const preventSameLanguage = () => {
-    if (sourceLanguage === targetLanguage && sourceLanguage !== "detect") {
-      if (sourceLanguage === "en") {
-        setTargetLanguage("ko");
-      } else if (sourceLanguage === "ko") {
-        setTargetLanguage("en");
-      } else if (sourceLanguage === "es") {
-        setTargetLanguage("en");
-      } else if (sourceLanguage === "ja") {
-        setTargetLanguage("ko");
-      } else {
-        setTargetLanguage("en");
+  // 같은 언어 선택 방지를 위한 함수 개선
+  const preventSameLanguage = (
+    sourceCode: string,
+    targetCode: string,
+    detectedCode: string | null = null
+  ) => {
+    // 실제 소스 코드 결정 (감지된 언어가 있으면 그것을 사용)
+    const effectiveSourceCode = sourceCode === "detect" && detectedCode ? detectedCode : sourceCode;
+    
+    // 소스와 타겟이 같은 언어이면 타겟 언어를 변경
+    if (effectiveSourceCode === targetCode) {
+      // 타겟 언어 변경 로직
+      const alternativeLanguage = languages.find(
+        (lang) => lang.code !== effectiveSourceCode && lang.code !== "detect"
+      );
+      
+      if (alternativeLanguage) {
+        setTargetLanguage(alternativeLanguage.code);
+        return true;
       }
+    }
+    return false;
+  };
+
+  // 언어 감지 결과를 처리하는 코드 개선
+  useEffect(() => {
+    // 감지된 언어 코드가 있고, 현재 소스 언어가 "detect"인 경우
+    if (detectedLanguageCode && sourceLanguage === "detect") {
+      // 감지된 언어와 타겟 언어가 같은지 확인하고 필요시 타겟 언어 변경
+      preventSameLanguage("detect", targetLanguage, detectedLanguageCode);
+    }
+  }, [detectedLanguageCode, sourceLanguage, targetLanguage]);
+
+  // 소스 언어 변경 시 이벤트 핸들러 개선
+  const handleSourceLanguageChange = (code: string) => {
+    setSourceLanguage(code);
+    
+    // 'detect' 모드가 아닌 경우 또는 'detect' 모드지만 이미 감지된 언어가 있는 경우
+    if (code !== "detect" || (code === "detect" && detectedLanguageCode)) {
+      const effectiveCode = code === "detect" ? detectedLanguageCode : code;
+      preventSameLanguage(effectiveCode, targetLanguage);
     }
   };
 
-  const handleSourceLanguageChange = (langCode: string) => {
-    setSourceLanguage(langCode);
-    preventSameLanguage();
-  };
-
-  const handleTargetLanguageChange = (langCode: string) => {
-    setTargetLanguage(langCode);
-    preventSameLanguage();
+  // 타겟 언어 변경 시 이벤트 핸들러 개선
+  const handleTargetLanguageChange = (code: string) => {
+    setTargetLanguage(code);
+    
+    // 'detect' 모드인 경우 감지된 언어를 사용, 아니면 선택된 소스 언어 사용
+    const effectiveSourceCode = sourceLanguage === "detect" && detectedLanguageCode
+      ? detectedLanguageCode
+      : sourceLanguage;
+      
+    preventSameLanguage(effectiveSourceCode, code);
   };
 
   // 번역 함수 개선
@@ -281,14 +306,34 @@ export function Translator() {
     currentInputRef.current = sourceText;
     
     try {
-      // 1. "detect" 모드일 경우 먼저 언어 감지
+      // 먼저 detectedLanguageInfo 변수 선언
       let detectedLanguageInfo = null;
       
+      // 언어 감지 처리 (클라이언트 측 감지 사용)
       if (sourceLanguage === "detect") {
-        // 서버 API 호출 대신 클라이언트 측 감지만 사용
         const detected = simpleDetectLanguage(sourceText);
         setDetectedLanguageCode(detected.code);
         setDetectedLanguageName(detected.name);
+        
+        // 감지된 언어와 타겟 언어가 같은지 확인
+        if (detected.code === targetLanguage) {
+          // 같은 언어인 경우 알림 표시
+          setError("입력 언어와 출력 언어가 같습니다. 다른 출력 언어를 선택하세요.");
+          
+          // 자동으로 다른 언어로 변경 (옵션)
+          const alternativeLanguage = languages.find(
+            (lang) => lang.code !== detected.code && lang.code !== "detect"
+          );
+          
+          if (alternativeLanguage) {
+            setTargetLanguage(alternativeLanguage.code);
+            // 알림
+            setError(`출력 언어가 자동으로 ${alternativeLanguage.name}로 변경되었습니다.`);
+            
+            // 잠시 후 알림 숨기기
+            setTimeout(() => setError(null), 3000);
+          }
+        }
         
         // 감지된 정보로 번역 진행
         detectedLanguageInfo = {
@@ -298,17 +343,19 @@ export function Translator() {
         };
       }
       
-      // 2. 언어 이름 준비
-      const inputLanguageName = sourceLanguage === "detect" 
+      // 언어 이름 가져오기
+      let inputLanguageName = sourceLanguage === "detect" 
         ? "Detect Language" 
         : languages.find(l => l.code === sourceLanguage)?.name || "English";
       
       const outputLanguageName = languages.find(l => l.code === targetLanguage)?.name || "English";
-      
-      // 3. 번역 API 호출
+
+      // 번역 API 호출
       const response = await fetch('/api/translate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify({
           inputText: sourceText,
           inputLanguage: inputLanguageName,
@@ -321,7 +368,7 @@ export function Translator() {
       const data = await response.json();
       console.log("번역 API 응답:", data);
       
-      // 4. 번역 결과 처리
+      // 번역 결과 정제
       const cleanedTranslation = cleanTranslationResult(data.text);
       setTranslatedText(cleanedTranslation);
       
