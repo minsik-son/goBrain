@@ -25,6 +25,6 @@ export const getLanguageCodeFromName = (name: string): string | null => {
 };
 
 // 언어 코드에서 이름 찾기
-export const getLanguageNameFromCode = (code: string): string | null => {
-  return langCodeToName[code] || null;
-}; 
+export const getLanguageNameFromCode = (code: string): string => {
+  return langCodeToName[code] || 'Unknown';
+};

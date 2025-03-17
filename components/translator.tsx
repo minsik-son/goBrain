@@ -38,7 +38,7 @@ const cleanTranslationResult = (text: string): string => {
 };
 
 // 간단한 클라이언트 측 언어 감지 함수
-const simpleDetectLanguage = (text) => {
+const simpleDetectLanguage = (text: string) => {
   const patterns = {
     'en': /^[a-zA-Z\s.,!?'"-]+$/,
     'ko': /[\uAC00-\uD7AF]/,
@@ -130,12 +130,63 @@ export function Translator() {
     }
   }
 
-  // 실시간 언어 감지 최적화 (입력이 멈추면 언어 감지 실행)
+  // 언어 감지 과정 제어를 위한 상태 추가
+  const [isDetecting, setIsDetecting] = useState(false);
+
+  // 언어 감지 함수 - 클라이언트 측 감지와 서버 API 모두 사용
+  const detectLanguage = async (text: string) => {
+    setIsDetecting(true);
+    
+    // 1. 클라이언트 측 감지 먼저 시도 (즉시 결과 제공)
+    const clientDetected = simpleDetectLanguage(text);
+    setDetectedLanguageCode(clientDetected.code);
+    setDetectedLanguageName(clientDetected.name);
+    
+    try {
+      // 2. 더 정확한 서버 API 결과를 기다림 (백그라운드에서)
+      const response = await fetch('/api/detect-language', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        // 서버 API 결과로 업데이트 (더 정확함)
+        if (data.detectedLanguage && data.detectedLanguage.code) {
+          console.log("감지된 언어 코드:", data.detectedLanguage.code);
+          console.log("감지된 언어 이름:", data.detectedLanguage.name);
+          setDetectedLanguageCode(data.detectedLanguage.code);
+          setDetectedLanguageName(data.detectedLanguage.name);
+        }
+      }
+    } catch (error) {
+      console.error("서버 API 오류, 클라이언트 결과 유지:", error);
+    } finally {
+      setIsDetecting(false);
+    }
+    
+    return clientDetected; // 클라이언트 측 결과 즉시 반환
+  };
+
+  // 언어 감지 결과를 처리하는 코드 개선
+  useEffect(() => {
+    // 감지된 언어 코드가 있고, 현재 소스 언어가 "detect"인 경우
+    if (detectedLanguageCode && sourceLanguage === "detect" && !isDetecting) {
+      // 감지된 언어와 타겟 언어가 같은지 확인하고 필요시 타겟 언어 변경
+      preventSameLanguage("detect", targetLanguage, detectedLanguageCode);
+    }
+  }, [detectedLanguageCode, sourceLanguage, targetLanguage, isDetecting]);
+
+  // 실시간 언어 감지 함수 개선
   useEffect(() => {
     // 이미 감지된 언어가 있거나 텍스트가 너무 짧으면 실행 안함
     if (sourceLanguage !== "detect" || sourceText.trim().length < 4) {
       return;
     }
+    
+    // 감지 중 상태로 설정 - 이 상태인 동안은 preventSameLanguage가 작동하지 않음
+    setIsDetecting(true);
     
     const debounceTimeout = setTimeout(async () => {
       // 이미 번역 중이면 언어 감지 스킵
@@ -152,18 +203,21 @@ export function Translator() {
         
         if (response.ok) {
           const data = await response.json();
-          console.log("언어 감지 결과:", data);
           
           if (data.detectedLanguage && data.detectedLanguage.code) {
             setDetectedLanguageCode(data.detectedLanguage.code);
             setDetectedLanguageName(data.detectedLanguage.name);
             console.log(`실시간 언어 감지: ${data.detectedLanguage.name}`);
+            // 감지가 완료된 후 감지 상태 해제
+            setTimeout(() => setIsDetecting(false), 100);
           }
         } else {
           console.log("API 오류, 클라이언트 측 감지 사용");
           const detected = simpleDetectLanguage(sourceText);
           setDetectedLanguageCode(detected.code);
           setDetectedLanguageName(detected.name);
+          // 감지가 완료된 후 감지 상태 해제
+          setTimeout(() => setIsDetecting(false), 100);
         }
       } catch (error) {
         console.error("언어 감지 API 오류:", error);
@@ -171,6 +225,8 @@ export function Translator() {
         const detected = simpleDetectLanguage(sourceText);
         setDetectedLanguageCode(detected.code);
         setDetectedLanguageName(detected.name);
+        // 감지가 완료된 후 감지 상태 해제
+        setTimeout(() => setIsDetecting(false), 100);
       }
     }, 800); // 텍스트 입력이 멈춘 후 800ms 기다림
     
@@ -238,6 +294,9 @@ export function Translator() {
     targetCode: string,
     detectedCode: string | null = null
   ) => {
+    // 감지 중일 때는 함수 실행 안함
+    if (isDetecting) return false;
+    
     // 실제 소스 코드 결정 (감지된 언어가 있으면 그것을 사용)
     const effectiveSourceCode = sourceCode === "detect" && detectedCode ? detectedCode : sourceCode;
     
@@ -288,7 +347,7 @@ export function Translator() {
     preventSameLanguage(effectiveSourceCode, code);
   };
 
-  // 번역 함수 개선
+  // 번역 함수 수정
   const translateText = async () => {
     if (!sourceText.trim()) {
       setTranslatedText("");
@@ -297,6 +356,7 @@ export function Translator() {
     
     setIsTranslating(true);
     setError(null);
+    isTranslatingRef.current = true;
     
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -306,41 +366,57 @@ export function Translator() {
     currentInputRef.current = sourceText;
     
     try {
-      // 먼저 detectedLanguageInfo 변수 선언
+      // 먼저 detectedLanguageInfo 변수 선언 및 초기화
       let detectedLanguageInfo = null;
       
-      // 언어 감지 처리 (클라이언트 측 감지 사용)
+      // 언어 감지 처리
       if (sourceLanguage === "detect") {
-        const detected = simpleDetectLanguage(sourceText);
-        setDetectedLanguageCode(detected.code);
-        setDetectedLanguageName(detected.name);
+        // 감지 중 상태로 설정
+        setIsDetecting(true);
         
-        // 감지된 언어와 타겟 언어가 같은지 확인
-        if (detected.code === targetLanguage) {
-          // 같은 언어인 경우 알림 표시
-          setError("입력 언어와 출력 언어가 같습니다. 다른 출력 언어를 선택하세요.");
+        try {
+          const response = await fetch('/api/detect-language', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: sourceText }),
+            signal: abortControllerRef.current.signal
+          });
           
-          // 자동으로 다른 언어로 변경 (옵션)
-          const alternativeLanguage = languages.find(
-            (lang) => lang.code !== detected.code && lang.code !== "detect"
-          );
-          
-          if (alternativeLanguage) {
-            setTargetLanguage(alternativeLanguage.code);
-            // 알림
-            setError(`출력 언어가 자동으로 ${alternativeLanguage.name}로 변경되었습니다.`);
+          if (response.ok) {
+            const data = await response.json();
             
-            // 잠시 후 알림 숨기기
-            setTimeout(() => setError(null), 3000);
+            if (data.detectedLanguage && data.detectedLanguage.code) {
+              detectedLanguageInfo = data.detectedLanguage;
+              setDetectedLanguageCode(data.detectedLanguage.code);
+              setDetectedLanguageName(data.detectedLanguage.name);
+            }
+          } else {
+            // API 오류 시 클라이언트 측 감지 사용
+            const detected = simpleDetectLanguage(sourceText);
+            detectedLanguageInfo = {
+              code: detected.code,
+              name: detected.name,
+              confidence: 0.8
+            };
+            setDetectedLanguageCode(detected.code);
+            setDetectedLanguageName(detected.name);
+          }
+        } catch (error) {
+          if (error instanceof Error && error.name !== 'AbortError') {
+            console.error("언어 감지 오류:", error);
+            // 오류 시 클라이언트 측 감지 사용
+            const detected = simpleDetectLanguage(sourceText);
+            detectedLanguageInfo = {
+              code: detected.code,
+              name: detected.name,
+              confidence: 0.8
+            };
+            setDetectedLanguageCode(detected.code);
+            setDetectedLanguageName(detected.name);
+          } else {
+            throw error; // AbortError는 상위로 전파
           }
         }
-        
-        // 감지된 정보로 번역 진행
-        detectedLanguageInfo = {
-          code: detected.code,
-          name: detected.name,
-          confidence: 0.8
-        };
       }
       
       // 언어 이름 가져오기
@@ -366,41 +442,32 @@ export function Translator() {
       });
       
       const data = await response.json();
-      console.log("번역 API 응답:", data);
       
       // 번역 결과 정제
       const cleanedTranslation = cleanTranslationResult(data.text);
       setTranslatedText(cleanedTranslation);
       
-      // 5. 언어 불일치 확인 (감지된 언어와 선택된 언어가 다른 경우)
-      if (sourceLanguage !== "detect" && data.detectedLanguage) {
-        const detectedCode = data.detectedLanguage.code;
-        const detectedName = data.detectedLanguage.name;
-        
-        if (detectedCode && sourceLanguage !== detectedCode) {
-          const selectedLangName = languages.find(l => l.code === sourceLanguage)?.name || sourceLanguage;
-          
-          setLanguageMismatch({
-            detected: detectedName,
-            detectedCode: detectedCode,
-            current: selectedLangName
-          });
-        } else {
-          setLanguageMismatch(null);
-        }
+      // 감지 상태 해제 및 같은 언어 체크
+      setIsDetecting(false);
+      
+      // 감지된 언어가 있고 타겟 언어와 같은 경우 처리
+      if (sourceLanguage === "detect" && detectedLanguageInfo?.code === targetLanguage) {
+        setError("입력 언어와 출력 언어가 같습니다. 다른 출력 언어를 선택하세요.");
       }
       
-      // 6. 사용량 통계 업데이트 (있는 경우)
+      // 사용 통계 업데이트
       if (data.usageStats) {
         setUsageStats(data.usageStats);
       }
     } catch (err) {
-      if (err.name !== 'AbortError') {
+      setIsDetecting(false);
+      if (err instanceof Error && err.name !== 'AbortError') {
         console.error("번역 오류:", err);
         setError("번역 중 오류가 발생했습니다. 다시 시도해주세요.");
       }
     } finally {
       setIsTranslating(false);
+      isTranslatingRef.current = false;
     }
   };
   
@@ -439,6 +506,15 @@ export function Translator() {
     window.addEventListener('resize', adjustTextareaHeight);
     return () => window.removeEventListener('resize', adjustTextareaHeight);
   }, [sourceText, translatedText]);
+
+  // 언어 감지 상태를 감시하는 디버깅 로직 추가
+  useEffect(() => {
+    console.log("감지 상태 변경:", {
+      detectedLanguageCode,
+      detectedLanguageName,
+      isDetecting
+    });
+  }, [detectedLanguageCode, detectedLanguageName, isDetecting]);
 
   return (
     <div className="w-full max-w-6xl mx-auto bg-white rounded-xl shadow-sm border">

@@ -1,10 +1,34 @@
 import { OpenAI } from "openai";
 import { NextResponse } from "next/server";
+import { getLanguageNameFromCode } from "@/lib/utils/language-utils";
 
 // Initialize OpenAI client with API key from environment variables
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
+
+// 언어 코드를 이름으로 변환하는 매핑 객체
+const languageNames = {
+  'en': 'English',
+  'ko': 'Korean',
+  'ja': 'Japanese',
+  'zh': 'Chinese',
+  'es': 'Spanish',
+  'fr': 'French',
+  'de': 'German',
+  'ru': 'Russian',
+  'pt': 'Portuguese',
+  'ar': 'Arabic',
+  'hi': 'Hindi',
+  'vi': 'Vietnamese',
+  'th': 'Thai',
+  'tr': 'Turkish',
+  'id': 'Indonesian',
+  'it': 'Italian'
+};
+
+// 유효한 언어 코드 목록
+const validLangCodes = ["en", "ko", "ja", "zh", "es", "fr", "de", "ru", "it", "pt", "ar", "hi", "vi", "th", "tr", "id"];
 
 export async function POST(req: Request) {
   try {
@@ -39,13 +63,15 @@ export async function POST(req: Request) {
     const content = response.choices[0].message.content || "";
     console.log("API 응답 원본:", content);
     
-    // 간단한 텍스트 분석으로 언어 코드와 이름 추출
-    // "en", "ko", "English", "Korean" 등의 패턴 찾기
-    const codeMatch = content.match(/\b([a-z]{2})\b/i);
-    const nameMatch = content.match(/\b(English|Korean|Japanese|Chinese|Spanish|French|German|Russian)\b/i);
-    
-    const languageCode = codeMatch ? codeMatch[0].toLowerCase() : "en";
-    const languageName = nameMatch ? nameMatch[0] : "English";
+    // 언어 코드와 이름의 패턴을 더 엄격하게 매칭
+    const codeMatch = content.match(/\blanguage\s+code\s*(?:is|:)?\s*['"]?([a-z]{2})['"]?/i) || 
+                     content.match(/\bcode\s*(?:is|:)?\s*['"]?([a-z]{2})['"]?/i) ||
+                     content.match(/\b([a-z]{2})\b(?=\s*-\s*[A-Z])/i); // "ko - Korean" 패턴 매칭
+
+    const languageCode = codeMatch ? codeMatch[1].toLowerCase() : "en";
+
+    // 유틸리티 함수를 사용하여 언어 이름 가져오기
+    const languageName = getLanguageNameFromCode(languageCode);
     
     return NextResponse.json({
       detectedLanguage: {
