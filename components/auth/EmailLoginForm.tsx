@@ -28,10 +28,11 @@ export default function EmailLoginForm({
   const [confirmPassword, setConfirmPassword] = useState("")
   const { toast } = useToast()
   const supabase = createClientComponentClient()
+  const [isLoading, setIsLoadingState] = useState(false)
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsLoading(true)
+    setIsLoadingState(true)
 
     try {
       const { error } = await supabase.auth.signInWithPassword({
@@ -60,7 +61,7 @@ export default function EmailLoginForm({
         variant: "destructive"
       })
     } finally {
-      setIsLoading(false)
+      setIsLoadingState(false)
     }
   }
 
@@ -76,7 +77,7 @@ export default function EmailLoginForm({
       return
     }
     
-    setIsLoading(true)
+    setIsLoadingState(true)
 
     try {
       const { error } = await supabase.auth.signUp({
@@ -103,7 +104,7 @@ export default function EmailLoginForm({
         variant: "destructive"
       })
     } finally {
-      setIsLoading(false)
+      setIsLoadingState(false)
     }
   }
 
@@ -159,7 +160,7 @@ export default function EmailLoginForm({
               </span>
             </div>
             
-            <GoogleLoginButton setIsLoading={setIsLoading} onSuccess={onSuccess} />
+            <GoogleLoginButton setIsLoading={setIsLoadingState} onSuccess={onSuccess} isLoading={isLoading} />
           </div>
           <div className="text-center text-sm">
             Don't have an account?{" "}
@@ -224,7 +225,7 @@ export default function EmailLoginForm({
               </span>
             </div>
             
-            <GoogleLoginButton setIsLoading={setIsLoading} onSuccess={onSuccess} />
+            <GoogleLoginButton setIsLoading={setIsLoadingState} onSuccess={onSuccess} isLoading={isLoading} />
           </div>
           <div className="text-center text-sm">
             Already have an account?{" "}

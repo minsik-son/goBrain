@@ -37,6 +37,18 @@ const cleanTranslationResult = (text: string): string => {
   return cleanedText.replace(/^["']|["']$/g, '').trim();
 };
 
+// 언어 이름 매핑
+const langNames: { [key: string]: string } = {
+  en: "English",
+  ko: "Korean",
+  ja: "Japanese",
+  zh: "Chinese",
+  es: "Spanish",
+  fr: "French",
+  de: "German",
+  ru: "Russian",
+};
+
 // 간단한 클라이언트 측 언어 감지 함수
 const simpleDetectLanguage = (text: string) => {
   const patterns = {
@@ -52,21 +64,11 @@ const simpleDetectLanguage = (text: string) => {
   
   for (const [code, pattern] of Object.entries(patterns)) {
     if (pattern.test(text)) {
-      const langNames = {
-        'en': 'English',
-        'ko': 'Korean',
-        'ja': 'Japanese',
-        'zh': 'Chinese',
-        'es': 'Spanish',
-        'fr': 'French',
-        'de': 'German',
-        'ru': 'Russian'
-      };
-      return { code, name: langNames[code] };
+      return { code, name: langNames[code as keyof typeof langNames] };
     }
   }
   
-  return { code: 'en', name: 'English' }; // 기본값
+  return { code: 'en', name: langNames['en'] }; // 기본값
 };
 
 export function Translator() {
@@ -331,7 +333,9 @@ export function Translator() {
     // 'detect' 모드가 아닌 경우 또는 'detect' 모드지만 이미 감지된 언어가 있는 경우
     if (code !== "detect" || (code === "detect" && detectedLanguageCode)) {
       const effectiveCode = code === "detect" ? detectedLanguageCode : code;
-      preventSameLanguage(effectiveCode, targetLanguage);
+      if (effectiveCode) {
+        preventSameLanguage(effectiveCode, targetLanguage);
+      }
     }
   };
 

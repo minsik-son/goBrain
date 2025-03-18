@@ -1,12 +1,18 @@
 "use client"
 
+import React from 'react';
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { FaGoogle } from "react-icons/fa";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 
-export default function GoogleLoginButton() {
-  const [isLoading, setIsLoading] = useState(false);
+type GoogleLoginButtonProps = {
+  setIsLoading: (isLoading: boolean) => void;
+  onSuccess: () => void;
+  isLoading: boolean;
+};
+
+const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({ setIsLoading, onSuccess, isLoading }) => {
   const [error, setError] = useState<string | null>(null);
   const supabase = createClientComponentClient();
   
@@ -29,6 +35,7 @@ export default function GoogleLoginButton() {
       if (signInError) {
         throw signInError;
       }
+      onSuccess();
     } catch (err) {
       console.error("Error signing in with Google:", err);
       setError(err instanceof Error ? err.message : "구글 로그인 중 오류가 발생했습니다");
@@ -55,4 +62,6 @@ export default function GoogleLoginButton() {
       )}
     </>
   );
-} 
+};
+
+export default GoogleLoginButton; 

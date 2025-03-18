@@ -1,6 +1,7 @@
 import { OpenAI } from "openai";
 import { NextResponse } from "next/server";
 import { langCodeToName } from "@/lib/utils/language-utils";
+import ChatCompletionMessageParam from "openai";
 
 // Initialize OpenAI client with API key from environment variables
 const openai = new OpenAI({
@@ -30,7 +31,7 @@ export async function POST(req: Request) {
     }
 
     // 번역 실행
-    const messages = [
+    const messages: ChatCompletionMessageParam[] = [
       {
         role: "system",
         content: "Translate the text accurately and naturally. Only return the translated text without any explanations or comments."

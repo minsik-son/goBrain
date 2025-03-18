@@ -1,5 +1,5 @@
 // 언어 코드와 이름 매핑
-export const langCodeToName = {
+export const langCodeToName: { [key: string]: string } = {
   'en': 'English',
   'ko': 'Korean',
   'ja': 'Japanese',
@@ -25,6 +25,6 @@ export const getLanguageCodeFromName = (name: string): string | null => {
 };
 
 // 언어 코드에서 이름 찾기
-export const getLanguageNameFromCode = (code: string): string => {
+export const getLanguageNameFromCode = (code: keyof typeof langCodeToName): string => {
   return langCodeToName[code] || 'Unknown';
 };
