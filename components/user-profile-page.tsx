@@ -50,6 +50,9 @@ export function UserProfilePage() {
   const [userName, setUserName] = useState("")
   const [user, setUser] = useState<any>(null)
   const [userID, setUserID] = useState<any>(null)
+  const [email, setEmail] = useState("")
+  const [createdAt, setCreatedAt] = useState("")
+  const [preferredLanguage, setPreferredLanguage] = useState("")
   const supabase = createClientComponentClient()
 
   useEffect(() => {
@@ -58,9 +61,7 @@ export function UserProfilePage() {
       if (userSessionError) {
         console.error("유저 세션을 가져오지 못함:", userSessionError);
       }
-      else {
-        console.log("userSession", data)
-      }
+
       if (data.session) {
         const { data: userData, error: userError } = await supabase.auth.getUser()
         if (userError) {
@@ -72,9 +73,6 @@ export function UserProfilePage() {
             setUser(userData.user)
             const userId = userData.user?.id
             setUserID(userId)
-            console.log("userData.user", userData.user)
-            console.log("userData", userData)
-            console.log("userId (지역 변수):", userId)
             
             if (userId) {
               const { data: userInfo, error: userInfoError } = await supabase
@@ -87,8 +85,11 @@ export function UserProfilePage() {
                 console.error("프로필 정보를 가져오지 못함:", userInfoError)
               } else {
                 console.log("userInfo:", userInfo)
-                setUserName(userInfo?.username || '')
+                setUserName(userInfo?.full_name || '')
                 setAvatarUrl(userInfo?.avatar_url || '')
+                setEmail(userInfo?.email || '')
+                setCreatedAt(userInfo?.created_at || '')
+                setPreferredLanguage(userInfo?.preferred_language || '')
               }
             }
           }
@@ -173,7 +174,7 @@ export function UserProfilePage() {
           <div className="flex-1 w-full p-6 md:p-8 overflow-auto">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h1 className="text-2xl font-bold">Profile Name</h1>
+                <h1 className="text-2xl font-bold">{userName}</h1>
                 <p className="text-muted-foreground">Manage your account and preferences</p>
               </div>
               <div className="flex items-center gap-4">
@@ -182,7 +183,7 @@ export function UserProfilePage() {
                   {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
                 </Button>
                 <Avatar>
-                  <AvatarImage src="" />
+                  <AvatarImage src="https://lh3.googleusercontent.com/a/ACg8ocKSBAqVJvx3rqHSqAd2_13mpNLXKg_E2NZZ1ThGUdppEahomA=s96-c" />
                   <AvatarFallback>JD</AvatarFallback>
                 </Avatar>
               </div>
@@ -221,21 +222,21 @@ export function UserProfilePage() {
                     <div className="flex flex-col md:flex-row gap-4 md:gap-8">
                       <div className="flex-1 space-y-2">
                         <Label htmlFor="name">Full Name</Label>
-                        <Input id="name" defaultValue="John Doe" />
+                        <Input id="name" defaultValue={userName} />
                       </div>
                       <div className="flex-1 space-y-2">
                         <Label htmlFor="email">Email Address</Label>
-                        <Input id="email" defaultValue="john.doe@example.com" />
+                        <Input id="email" defaultValue={email} />
                       </div>
                     </div>
                     <div className="flex flex-col md:flex-row gap-4 md:gap-8">
                       <div className="flex-1 space-y-2">
                         <Label htmlFor="language">Preferred Language</Label>
-                        <Input id="language" defaultValue="English" />
+                        <Input id="language" defaultValue={preferredLanguage} />
                       </div>
                       <div className="flex-1 space-y-2">
                         <Label htmlFor="joined">Account Created</Label>
-                        <Input id="joined" defaultValue="January 15, 2023" disabled />
+                        <Input id="joined" defaultValue={createdAt} disabled />
                       </div>
                     </div>
                   </CardContent>

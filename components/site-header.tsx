@@ -16,11 +16,14 @@ import { ChevronDown, ChevronUp } from "lucide-react"
 export function SiteHeader() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [user, setUser] = useState<any>(null)
+  const [userName, setUserName] = useState("")
   const [avatarUrl, setAvatarUrl] = useState(null)
+  const [userID, setUserID] = useState<any>(null)
   const [dropdownOpen, setDropdownOpen] = useState(false) // 드롭다운 상태 관리
   const supabase = createClientComponentClient()
 
-
+/* 
+기존 useEffect 코드
   useEffect(() => {
     const fetchSession = async () => {
       const { data } = await supabase.auth.getSession()
@@ -51,7 +54,63 @@ export function SiteHeader() {
       authListener.subscription.unsubscribe()
     }
   }, [supabase])
+*/
 
+useEffect(() => {
+  const fetchUserProfile = async () => {
+    const { data, error: userSessionError } = await supabase.auth.getSession()
+    setIsLoggedIn(!!data.session)
+    if (userSessionError) {
+      console.error("유저 세션을 가져오지 못함:", userSessionError);
+    }
+
+    if (data.session) {
+      const { data: userData, error: userError } = await supabase.auth.getUser()
+      if (userError) {
+        console.error("유저 정보를 가져오지 못함:", userError);
+        return;
+      }
+      else{
+        if (userData.user) {
+          setUser(userData.user)
+          const userId = userData.user?.id
+          setUserID(userId)
+          
+          if (userId) {
+            const { data: userInfo, error: userInfoError } = await supabase
+              .from('users')
+              .select('*')
+              .eq('id', userId)
+              .single()
+              
+            if (userInfoError) {
+              console.error("프로필 정보를 가져오지 못함:", userInfoError)
+            } else {
+              console.log("userInfo:", userInfo)
+              setUserName(userInfo?.full_name || '')
+              setAvatarUrl(userInfo?.avatar_url || '')
+            }
+          }
+        }
+      }
+    }
+  }
+  
+  fetchUserProfile()
+  const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+    setIsLoggedIn(!!session)
+    if (session) {
+      const { data: userData } = await supabase.auth.getUser()
+      setUser(userData.user)
+    } else {
+      setUser(null)
+    }
+  })
+
+  return () => {
+    authListener.subscription.unsubscribe()
+  }
+}, [supabase])
 
   // 드롭다운 외부 클릭 시 닫기
   useEffect(() => {
@@ -86,7 +145,7 @@ export function SiteHeader() {
                   onClick={() => setDropdownOpen(!dropdownOpen)}
                   className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white-100 rounded-lg focus:outline-none text-white"
                 >
-                  <span>Hello, {user?.user_metadata?.name || "User"}</span>
+                  <span>Hello, {userName || "User"}</span>
                   {dropdownOpen ? <ChevronUp className="w-4 h-4 ml-2" /> : <ChevronDown className="w-4 h-4 ml-2" />}
                 </button>
 
