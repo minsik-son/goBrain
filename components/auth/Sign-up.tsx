@@ -26,21 +26,21 @@ export default function SignUpForm({
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
-  const [preferredLanguage, setPreferredLanguage] = useState("en")
+  const [preferredLanguage, setPreferredLanguage] = useState("English")
   const [emailExists, setEmailExists] = useState(false)
   const { toast } = useToast()
   const supabase = createClientComponentClient()
   const [isLoading, setIsLoadingState] = useState(false)
 
   const languages = [
-    { code: "en", name: "영어" },
-    { code: "ko", name: "한국어" },
-    { code: "ja", name: "일본어" },
-    { code: "zh", name: "중국어" },
-    { code: "es", name: "스페인어" },
-    { code: "fr", name: "프랑스어" },
-    { code: "de", name: "독일어" },
-    { code: "ru", name: "러시아어" }
+    { code: "English", name: "영어" },
+    { code: "Korean", name: "한국어" },
+    { code: "Japanese", name: "일본어" },
+    { code: "Chinese", name: "중국어" },
+    { code: "Spanish", name: "스페인어" },
+    { code: "French", name: "프랑스어" },
+    { code: "German", name: "독일어" },
+    { code: "Russian", name: "러시아어" }
   ]
 
   const handleSignUp = async (e: React.FormEvent) => {
@@ -93,12 +93,13 @@ export default function SignUpForm({
         return
       }
       
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
             full_name : username,
+            preferred_language: preferredLanguage
           },
           emailRedirectTo: `${window.location.origin}/auth/callback`
         }
@@ -107,6 +108,20 @@ export default function SignUpForm({
       if (error) {
         console.log(error)
         throw error
+      }
+
+      if (data?.user) {
+        const { error: updateError } = await supabase
+          .from("users")
+          .update({ preferred_language: preferredLanguage }) // 테이블의 컬럼 이름에 맞게 수정
+          .eq("id", data.user.id);
+          console.log(data.user.id, preferredLanguage)
+      
+        if (updateError) {
+          console.error("preferred_language 업데이트 실패:", updateError);
+        } else {
+          console.log("preferred_language 업데이트 성공!");
+        }
       }
       
       toast({

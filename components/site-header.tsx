@@ -1,5 +1,10 @@
 "use client"
-
+/**
+ * 
+앞으로 해야할부분. 
+1. 유저 이름 public users에서 가져오기
+2. signup 페이지에서 preffered_language public users 테이블에 추가하기
+ */
 import { useState, useEffect } from "react"
 import { siteConfig } from "@/config/site"
 import { MainNav } from "@/components/main-nav"
@@ -10,14 +15,16 @@ import { ChevronDown, ChevronUp } from "lucide-react"
 
 export function SiteHeader() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
-  const [user, setUser] = useState(null)
+  const [user, setUser] = useState<any>(null)
   const [avatarUrl, setAvatarUrl] = useState(null)
   const [dropdownOpen, setDropdownOpen] = useState(false) // 드롭다운 상태 관리
   const supabase = createClientComponentClient()
 
+
   useEffect(() => {
     const fetchSession = async () => {
       const { data } = await supabase.auth.getSession()
+      console.log(data)
       setIsLoggedIn(!!data.session)
 
       if (data.session) {
@@ -44,6 +51,7 @@ export function SiteHeader() {
       authListener.subscription.unsubscribe()
     }
   }, [supabase])
+
 
   // 드롭다운 외부 클릭 시 닫기
   useEffect(() => {

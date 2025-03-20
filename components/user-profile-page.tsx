@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { Bell, CreditCard, FileText, Globe, Home, LogOut, Moon, Settings, Sun, User } from "lucide-react"
-
+import { SiteHeader } from "@/components/site-header"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
@@ -10,7 +10,8 @@ import { Separator } from "@/components/ui/separator"
 import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import Link from "next/link"
-import { supabase } from "@/lib/supabaseClient"
+//import { supabase } from "@/lib/supabaseClient"
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
 import {
   Sidebar,
   SidebarContent,
@@ -45,11 +46,62 @@ export function UserProfilePage() {
   const [darkMode, setDarkMode] = useState(false)
   const [activeTab, setActiveTab] = useState("profile")
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [avartarUrl, setAvatarUrl] = useState("")
+  const [avatarUrl, setAvatarUrl] = useState("")
   const [userName, setUserName] = useState("")
+  const [user, setUser] = useState<any>(null)
+  const [userID, setUserID] = useState<any>(null)
+  const supabase = createClientComponentClient()
 
-
- 
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      const { data, error: userSessionError } = await supabase.auth.getSession()
+      if (userSessionError) {
+        console.error("유저 세션을 가져오지 못함:", userSessionError);
+      }
+      else {
+        console.log("userSession", data)
+      }
+      if (data.session) {
+        const { data: userData, error: userError } = await supabase.auth.getUser()
+        if (userError) {
+          console.error("유저 정보를 가져오지 못함:", userError);
+          return;
+        }
+        else{
+          if (userData.user) {
+            setUser(userData.user)
+            const userId = userData.user?.id
+            setUserID(userId)
+            console.log("userData.user", userData.user)
+            console.log("userData", userData)
+            console.log("userId (지역 변수):", userId)
+            
+            if (userId) {
+              const { data: userInfo, error: userInfoError } = await supabase
+                .from('users')
+                .select('*')
+                .eq('id', userId)
+                .single()
+                
+              if (userInfoError) {
+                console.error("프로필 정보를 가져오지 못함:", userInfoError)
+              } else {
+                console.log("userInfo:", userInfo)
+                setUserName(userInfo?.username || '')
+                setAvatarUrl(userInfo?.avatar_url || '')
+              }
+            }
+          }
+        }
+      }
+    }
+    
+    fetchUserProfile()
+  }, [])
+  
+  useEffect(() => {
+    console.log("userID 상태가 변경됨:", userID)
+  }, [userID])
 
   // Toggle dark mode
   const toggleDarkMode = () => {
@@ -59,9 +111,10 @@ export function UserProfilePage() {
 
   return (
     <div className={`min-h-screen bg-background ${darkMode ? "dark" : ""}`}>
+      <SiteHeader />
       <SidebarProvider>
         <div className="flex min-h-screen">
-          <Sidebar>
+          <Sidebar className="pt-16">
             <SidebarHeader className="flex items-center gap-2 px-4 py-2">
             <Link href="/"> {/* Link 컴포넌트로 감싸기 */}
                 <div className="flex items-center gap-2 cursor-pointer"> {/* 클릭 가능하게 하기 위해 cursor-pointer 추가 */}
