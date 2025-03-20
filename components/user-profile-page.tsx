@@ -41,6 +41,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { useToast } from "@/components/ui/use-toast"
 
 export function UserProfilePage() {
   const [darkMode, setDarkMode] = useState(false)
@@ -53,6 +54,14 @@ export function UserProfilePage() {
   const [email, setEmail] = useState("")
   const [createdAt, setCreatedAt] = useState("")
   const [preferredLanguage, setPreferredLanguage] = useState("")
+  const [plan, setPlan] = useState("")
+  const [formData, setFormData] = useState({
+    fullName: "",
+    email: "",
+    preferredLanguage: ""
+  })
+  const [isSaving, setIsSaving] = useState(false)
+  const { toast } = useToast()
   const supabase = createClientComponentClient()
 
   useEffect(() => {
@@ -90,6 +99,7 @@ export function UserProfilePage() {
                 setEmail(userInfo?.email || '')
                 setCreatedAt(userInfo?.created_at || '')
                 setPreferredLanguage(userInfo?.preferred_language || '')
+                setPlan(userInfo?.plan || '')
               }
             }
           }
@@ -103,6 +113,76 @@ export function UserProfilePage() {
   useEffect(() => {
     console.log("userID 상태가 변경됨:", userID)
   }, [userID])
+
+  useEffect(() => {
+    setFormData({
+      fullName: userName,
+      email: email,
+      preferredLanguage: preferredLanguage
+    })
+  }, [userName, email, preferredLanguage])
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { id, value } = e.target
+    
+    setFormData(prev => ({
+      ...prev,
+      [id === 'name' ? 'fullName' : id === 'language' ? 'preferredLanguage' : id]: value
+    }))
+  }
+
+  const handleSaveChanges = async () => {
+    if (!userID) {
+      toast({
+        title: "오류",
+        description: "사용자 정보를 찾을 수 없습니다.",
+        variant: "destructive"
+      })
+      return
+    }
+    
+    setIsSaving(true)
+    
+    try {
+      if (email !== formData.email) {
+        const { error: emailError } = await supabase.auth.updateUser({
+          email: formData.email
+        })
+        
+        if (emailError) throw emailError
+      }
+      
+      const { error: profileError } = await supabase
+        .from('users')
+        .update({
+          full_name: formData.fullName,
+          preferred_language: formData.preferredLanguage,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userID)
+      
+      if (profileError) throw profileError
+      
+      setUserName(formData.fullName)
+      setEmail(formData.email)
+      setPreferredLanguage(formData.preferredLanguage)
+      
+      toast({
+        title: "성공",
+        description: "프로필 정보가 성공적으로 업데이트되었습니다.",
+      })
+      
+    } catch (error: any) {
+      console.error("프로필 업데이트 오류:", error)
+      toast({
+        title: "오류",
+        description: error.message || "프로필을 업데이트하는 중 오류가 발생했습니다.",
+        variant: "destructive"
+      })
+    } finally {
+      setIsSaving(false)
+    }
+  }
 
   // Toggle dark mode
   const toggleDarkMode = () => {
@@ -183,7 +263,7 @@ export function UserProfilePage() {
                   {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
                 </Button>
                 <Avatar>
-                  <AvatarImage src="https://lh3.googleusercontent.com/a/ACg8ocKSBAqVJvx3rqHSqAd2_13mpNLXKg_E2NZZ1ThGUdppEahomA=s96-c" />
+                  <AvatarImage src={avatarUrl} />
                   <AvatarFallback>JD</AvatarFallback>
                 </Avatar>
               </div>
@@ -222,26 +302,47 @@ export function UserProfilePage() {
                     <div className="flex flex-col md:flex-row gap-4 md:gap-8">
                       <div className="flex-1 space-y-2">
                         <Label htmlFor="name">Full Name</Label>
-                        <Input id="name" defaultValue={userName} />
+                        <Input 
+                          id="name" 
+                          value={formData.fullName} 
+                          onChange={handleInputChange} 
+                        />
                       </div>
                       <div className="flex-1 space-y-2">
                         <Label htmlFor="email">Email Address</Label>
-                        <Input id="email" defaultValue={email} />
+                        <Input 
+                          id="email" 
+                          value={formData.email} 
+                          onChange={handleInputChange} 
+                        />
                       </div>
                     </div>
                     <div className="flex flex-col md:flex-row gap-4 md:gap-8">
                       <div className="flex-1 space-y-2">
                         <Label htmlFor="language">Preferred Language</Label>
-                        <Input id="language" defaultValue={preferredLanguage} />
+                        <Input 
+                          id="language" 
+                          value={formData.preferredLanguage} 
+                          onChange={handleInputChange} 
+                        />
                       </div>
                       <div className="flex-1 space-y-2">
                         <Label htmlFor="joined">Account Created</Label>
-                        <Input id="joined" defaultValue={createdAt} disabled />
+                        <Input id="joined" value={createdAt} disabled />
+                      </div>
+                      <div className="flex-1 space-y-2">
+                        <Label htmlFor="plan">Plan</Label>
+                        <p>{plan}</p>
                       </div>
                     </div>
                   </CardContent>
                   <CardFooter>
-                    <Button>Save Changes</Button>
+                    <Button 
+                      onClick={handleSaveChanges} 
+                      disabled={isSaving}
+                    >
+                      {isSaving ? "Saving..." : "Save Changes"}
+                    </Button>
                   </CardFooter>
                 </Card>
 
