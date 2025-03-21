@@ -7,6 +7,9 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks"
 import { updateUserProfile } from "@/lib/redux/slices/userSlice"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { ChevronDown, Check } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 interface UserInformationCardProps {
   supabase: any
@@ -124,17 +127,38 @@ export function UserInformationCard({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="preferredLanguage">Preferred Language</Label>
-            <select 
-              id="preferredLanguage" 
-              value={formData.preferredLanguage} 
-              onChange={handleInputChange} 
-              className="border rounded-md p-2 w-full"
-            >
-              {languages.map(lang => (
-                <option key={lang.code} value={lang.code}>{lang.name}</option>
-              ))}
-            </select>
+            <Label className="block" htmlFor="preferredLanguage">Preferred Language</Label>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="w-[200px] justify-between">
+                  {formData.preferredLanguage}
+                  <ChevronDown className="h-4 w-4 opacity-50" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-[200px] max-h-[300px] overflow-y-auto">
+                <DropdownMenuSeparator />
+                {languages.map((language) => (
+                  <DropdownMenuItem
+                    key={language.code}
+                    className={cn(
+                      "justify-between",
+                      formData.preferredLanguage === language.code && "font-semibold"
+                    )}
+                    onClick={() => {
+                      setFormData({
+                        ...formData,
+                        preferredLanguage: language.code
+                      });
+                    }}
+                  >
+                    {language.name}
+                    {formData.preferredLanguage === language.code && (
+                      <Check className="h-4 w-4" />
+                    )}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
           <div className="space-y-2">
             <Label htmlFor="phone">Phone Number</Label>

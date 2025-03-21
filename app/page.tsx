@@ -1,4 +1,4 @@
-import { Translator } from "@/components/translator"
+import { Translator } from "@/components/translate/translator"
 import { SiteHeader } from "@/components/site-header"
 import Footer from "@/components/footer"
 

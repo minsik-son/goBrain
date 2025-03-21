@@ -3,7 +3,9 @@
 import { useState, useEffect, useRef } from "react"
 import { useAuth } from "@/lib/contexts/auth-context"
 import { useUser } from "@/lib/contexts/user-context"
-import { Languages, Image, FileText, RotateCcw, X, Volume2, Star, Share2, ChevronDown, CheckCircle2, Copy, Clipboard, ArrowRightLeft } from "lucide-react"
+import { cn } from "@/lib/utils"
+
+import { Languages, Image, FileText, RotateCcw, X, Volume2, Star, Share2, ChevronDown, CheckCircle2, Copy, Clipboard, ArrowRightLeft, Check, ArrowRight } from "lucide-react"
 import { extractDetectedLanguage } from "@/components/detectLanguageAPI"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -18,6 +20,7 @@ import {
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/use-toast"
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
 // 언어 목록 정의
 const languages = [
@@ -892,6 +895,77 @@ export function Translator() {
         </TabsContent>
 
         <TabsContent value="document" className="mt-0">
+          <div className="flex items-center justify-between p-4 border-b">
+            <div className="flex items-center gap-2 flex-1">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="w-[200px] justify-between">
+                    {sourceLanguage || "Detect language"}
+                    <ChevronDown className="h-4 w-4 opacity-50" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-[200px] max-h-[300px] overflow-y-auto">
+                  <DropdownMenuItem
+                    className={cn(
+                      "justify-between",
+                      !sourceLanguage && "font-semibold"
+                    )}
+                    onClick={() => setSourceLanguage("")}
+                  >
+                    Detect language
+                    {!sourceLanguage && <Check className="h-4 w-4" />}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  {languages.map((language) => (
+                    <DropdownMenuItem
+                      key={language.code}
+                      className={cn(
+                        "justify-between",
+                        sourceLanguage === language.code && "font-semibold"
+                      )}
+                      onClick={() => setSourceLanguage(language.code)}
+                    >
+                      {language.name}
+                      {sourceLanguage === language.code && (
+                        <Check className="h-4 w-4" />
+                      )}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+
+            <ArrowRight className="h-4 w-4 mx-2" />
+
+            <div className="flex items-center gap-2 flex-1">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="w-[200px] justify-between">
+                    {languages.find(l => l.code === targetLanguage)?.name || "타겟 언어"}
+                    <ChevronDown className="h-4 w-4 opacity-50" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-[200px] max-h-[300px] overflow-y-auto">
+                  {languages.map((language) => (
+                    <DropdownMenuItem
+                      key={language.code}
+                      className={cn(
+                        "justify-between",
+                        targetLanguage === language.code && "font-semibold"
+                      )}
+                      onClick={() => setTargetLanguage(language.code)}
+                    >
+                      {language.name}
+                      {targetLanguage === language.code && (
+                        <Check className="h-4 w-4" />
+                      )}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+
           <div className="text-center py-12 border-2 border-dashed rounded-lg">
             <FileText className="h-12 w-12 mx-auto text-gray-400 mb-4" />
             <h3 className="text-lg font-medium mb-2">
