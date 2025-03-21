@@ -1,10 +1,12 @@
-import { useState, useEffect } from "react"
+'use client'
+
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { UserInformationCard } from "./UserInformationCard"
 import { NotificationPreferencesCard } from "./NotificationPreferencesCard"
+import { useAppSelector } from "@/lib/redux/hooks"
 import { 
   Dialog, 
   DialogContent, 
@@ -15,43 +17,26 @@ import {
 } from "@/components/ui/dialog"
 import { AlertTriangle } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { useState } from "react"
 
 interface ProfileTabContentProps {
-  userID: string
-  userData: {
-    userName: string
-    email: string
-    avatarUrl: string
-    createdAt: string
-    preferredLanguage: string
-    plan: string
-    phone: string
-    email_notifications: boolean
-    marketing_emails: boolean
-    product_updates: boolean
-  }
-  setUserData: React.Dispatch<React.SetStateAction<{
-    userName: string
-    email: string
-    avatarUrl: string
-    createdAt: string
-    preferredLanguage: string
-    plan: string
-  }>>
   supabase: any
   toast: any
 }
 
-export function ProfileTabContent({ userID, userData, setUserData, supabase, toast }: ProfileTabContentProps) {
+export function ProfileTabContent({ supabase, toast }: ProfileTabContentProps) {
   const [isDeleting, setIsDeleting] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const router = useRouter()
-
+  
+  // Redux에서 사용자 정보 가져오기
+  const userData = useAppSelector((state) => state.user)
+  
   const handleDeleteAccount = async () => {
     setIsDeleting(true)
     
     try {
-      const { error } = await supabase.auth.admin.deleteUser(userID)
+      const { error } = await supabase.auth.admin.deleteUser(userData.id)
       
       if (error) {
         console.error("Error deleting account:", error)
@@ -83,17 +68,11 @@ export function ProfileTabContent({ userID, userData, setUserData, supabase, toa
   return (
     <div className="space-y-6 w-full">
       <UserInformationCard 
-        userID={userID}
-        userData={userData}
-        setUserData={setUserData}
         supabase={supabase}
         toast={toast}
       />
       
       <NotificationPreferencesCard 
-        userID={userID}
-        userData={userData}
-        setUserData={setUserData}
         supabase={supabase}
         toast={toast}
       />

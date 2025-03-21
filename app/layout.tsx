@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabaseClient'
 import { useEffect, useState } from 'react'
 import { AuthProvider } from "@/lib/contexts/auth-context";
 import { UserProvider } from "@/lib/contexts/user-context";
+import { Providers } from './providers'
 
 /*
 export const metadata: Metadata = {
@@ -42,11 +43,13 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <AuthProvider>
-          <UserProvider>
-            {children}
-          </UserProvider>
-        </AuthProvider>
+        <Providers>
+          <AuthProvider>
+            <UserProvider>
+              {children}
+            </UserProvider>
+          </AuthProvider>
+        </Providers>
       </body>
     </html>
   )

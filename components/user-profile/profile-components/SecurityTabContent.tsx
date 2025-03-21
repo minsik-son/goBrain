@@ -1,22 +1,26 @@
+'use client'
+
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
+import { useAppSelector } from "@/lib/redux/hooks"
 
 interface SecurityTabContentProps {
-  userID: string
   supabase: any
   toast: any
 }
 
-export function SecurityTabContent({ userID, supabase, toast }: SecurityTabContentProps) {
+export function SecurityTabContent({ supabase, toast }: SecurityTabContentProps) {
+  const userData = useAppSelector(state => state.user)
   const [current, setCurrent] = useState("")
   const [newPassword, setNewPassword] = useState("")
   const [confirm, setConfirm] = useState("")
   const [isChangingPassword, setIsChangingPassword] = useState(false)
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false)
+  
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault()
     
@@ -61,11 +65,11 @@ export function SecurityTabContent({ userID, supabase, toast }: SecurityTabConte
   return (
     <div className="space-y-6 w-full">
       <Card className="w-full">
-        <CardHeader>
-          <CardTitle>Password</CardTitle>
-          <CardDescription>Change your password</CardDescription>
-        </CardHeader>
         <form onSubmit={handlePasswordChange}>
+          <CardHeader>
+            <CardTitle>Password</CardTitle>
+            <CardDescription>Update your password</CardDescription>
+          </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="current-password">Current Password</Label>

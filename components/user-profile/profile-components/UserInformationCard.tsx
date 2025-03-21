@@ -1,21 +1,14 @@
+'use client'
+
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks"
+import { updateUserProfile } from "@/lib/redux/slices/userSlice"
 
 interface UserInformationCardProps {
-  userID: string
-  userData: {
-    userName: string
-    email: string
-    avatarUrl: string
-    createdAt: string
-    preferredLanguage: string
-    plan: string
-    phone: string
-  }
-  setUserData: any
   supabase: any
   toast: any
 }
@@ -39,115 +32,86 @@ const languages = [
   { code: "Indonesian", name: "Indonesian" },
 ]
 
-type UserDataType = {
-  userName: string;
-  email: string;
-  avatarUrl: string;
-  createdAt: string;
-  preferredLanguage: string;
-  phone: string;
-  plan: string;
-};
-
-export function UserInformationCard({ userID, userData, setUserData, supabase, toast }: UserInformationCardProps) {
+export function UserInformationCard({ 
+  supabase, 
+  toast 
+}: UserInformationCardProps) {
+  // Redux에서 유저 데이터 가져오기
+  const userData = useAppSelector((state) => state.user)
+  const dispatch = useAppDispatch()
+  
+  // 폼 데이터 상태
   const [formData, setFormData] = useState({
-    fullName: "",
+    userName: "",
     email: "",
-    preferredLanguage: "",
-    phone: ""
+    preferredLanguage: "English",
+    phone: "",
   })
   
   const [isSaving, setIsSaving] = useState(false)
-
+  
+  // Redux store의 userData가 변경되면 폼 데이터 업데이트
   useEffect(() => {
-    setFormData({
-      fullName: userData.userName,
-      email: userData.email,
-      preferredLanguage: userData.preferredLanguage,
-      phone: userData.phone
-    })
+    if (userData) {
+      setFormData({
+        userName: userData.userName || "",
+        email: userData.email || "",
+        preferredLanguage: userData.preferredLanguage || "English",
+        phone: userData.phone || "",
+      })
+    }
   }, [userData])
-
+  
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { id, value } = e.target
-    
-    setFormData(prev => ({
-      ...prev,
-      [id === 'name' ? 'fullName' : id === 'language' ? 'preferredLanguage' : id === 'phone' ? 'phone' : id]: value
-    }))
+    setFormData({
+      ...formData,
+      [id]: value
+    })
   }
-
+  
   const handleSaveChanges = async () => {
-    if (!userID) {
-      toast({
-        title: "오류",
-        description: "사용자 정보를 찾을 수 없습니다.",
-        variant: "destructive"
-      })
-      return
-    }
-    
     setIsSaving(true)
     
     try {
-      if (userData.email !== formData.email) {
-        const { error: emailError } = await supabase.auth.updateUser({
-          email: formData.email
-        })
-        
-        if (emailError) throw emailError
-      }
-      
-      const { error: profileError } = await supabase
-        .from('users')
-        .update({
-          full_name: formData.fullName,
-          preferred_language: formData.preferredLanguage,
-          phone: formData.phone,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', userID)
-      
-      if (profileError) throw profileError
-      // 부모 컴포넌트의 상태 업데이트
-      setUserData((prev: UserDataType) => ({
-        ...prev,
-        userName: formData.fullName,
+      // Redux 액션 디스패치를 통해 사용자 프로필 업데이트
+      await dispatch(updateUserProfile({
+        fullName: formData.userName,
         email: formData.email,
         preferredLanguage: formData.preferredLanguage,
         phone: formData.phone
-      }))
+      })).unwrap()
       
       toast({
         title: "성공",
-        description: "프로필 정보가 성공적으로 업데이트되었습니다.",
+        description: "프로필이 성공적으로 업데이트되었습니다.",
       })
-      
     } catch (error: any) {
-      console.error("프로필 업데이트 오류:", error)
       toast({
         title: "오류",
-        description: error.message || "프로필을 업데이트하는 중 오류가 발생했습니다.",
+        description: error || "프로필 업데이트 중 오류가 발생했습니다.",
         variant: "destructive"
       })
     } finally {
       setIsSaving(false)
     }
   }
-
+  
   return (
     <Card className="w-full">
       <CardHeader>
         <CardTitle>User Information</CardTitle>
-        <CardDescription>Your personal account details</CardDescription>
+        <CardDescription>
+          Update your personal information
+        </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <CardContent>
+        <div className="grid gap-6">
           <div className="space-y-2">
-            <Label htmlFor="name">Full Name</Label>
+            <Label htmlFor="userName">Full Name</Label>
             <Input 
-              id="name" 
-              value={formData.fullName} 
+              id="userName" 
+              value={formData.userName} 
               onChange={handleInputChange} 
             />
           </div>
@@ -160,9 +124,9 @@ export function UserInformationCard({ userID, userData, setUserData, supabase, t
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="language">Preferred Language</Label>
+            <Label htmlFor="preferredLanguage">Preferred Language</Label>
             <select 
-              id="language" 
+              id="preferredLanguage" 
               value={formData.preferredLanguage} 
               onChange={handleInputChange} 
               className="border rounded-md p-2 w-full"
@@ -182,7 +146,7 @@ export function UserInformationCard({ userID, userData, setUserData, supabase, t
           </div>
           <div className="space-y-2">
             <Label htmlFor="joined">Account Created</Label>
-            <p>{userData.createdAt}</p>
+            <p>{userData.createdAt || '정보를 불러오는 중...'}</p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="plan">Plan</Label>
@@ -193,9 +157,9 @@ export function UserInformationCard({ userID, userData, setUserData, supabase, t
       <CardFooter>
         <Button 
           onClick={handleSaveChanges} 
-          disabled={isSaving}
+          disabled={isSaving || userData.isLoading}
         >
-          {isSaving ? "Saving..." : "Save Changes"}
+          {isSaving ? "저장 중..." : "Save Changes"}
         </Button>
       </CardFooter>
     </Card>

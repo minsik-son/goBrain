@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react"
+'use client'
+
+import { useState } from "react"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
 import { useToast } from "@/components/ui/use-toast"
-import { Clipboard, Eye, ChevronDown, ChevronUp, Trash2 } from "lucide-react"
+import { Clipboard, Eye, ChevronUp, Trash2 } from "lucide-react"
 import { format } from "date-fns"
 import {
   AlertDialog,
@@ -16,87 +17,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-
-interface TranslationHistory {
-  id: string
-  user_id: string
-  source_language: string
-  target_language: string
-  text: string
-  translated_text: string
-  word_count: number
-  created_at: string
-}
+import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks"
+import { deleteTranslationHistoryItem, fetchTranslationHistory, setCurrentPage } from "@/lib/redux/slices/translationHistorySlice"
 
 export function HistoryTabContent() {
-  const [history, setHistory] = useState<TranslationHistory[]>([])
-  const [loading, setLoading] = useState(true)
-  const [currentPage, setCurrentPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({})
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deletingItemId, setDeletingItemId] = useState<string | null>(null)
-  const [isDeleting, setIsDeleting] = useState(false)
-  const itemsPerPage = 5
   
-  const supabase = createClientComponentClient()
+  const dispatch = useAppDispatch()
+  const { items, isLoading, totalPages, currentPage } = useAppSelector((state) => state.translationHistory)
   const { toast } = useToast()
-  
-  useEffect(() => {
-    fetchTranslationHistory()
-  }, [currentPage])
-  
-  const fetchTranslationHistory = async () => {
-    setLoading(true)
-    
-    try {
-      // 먼저 사용자 ID 가져오기
-      const { data: userData } = await supabase.auth.getUser()
-      const userId = userData.user?.id
-      
-      if (!userId) {
-        throw new Error("로그인이 필요합니다.")
-      }
-      
-      // 전체 기록 수 가져오기
-      const { count, error: countError } = await supabase
-        .from('translation_history')
-        .select('id', { count: 'exact' })
-        .eq('user_id', userId)
-      
-      if (countError) throw countError
-      
-      const total = count || 0
-      setTotalPages(Math.ceil(total / itemsPerPage))
-      
-      // 페이지네이션된 기록 가져오기
-      const from = (currentPage - 1) * itemsPerPage
-      const to = from + itemsPerPage - 1
-      
-      const { data, error } = await supabase
-        .from('translation_history')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .range(from, to)
-      
-      if (error) throw error
-      
-      setHistory(data || [])
-      
-    } catch (error: any) {
-      console.error("기록 가져오기 오류:", error)
-      toast({
-        title: "오류",
-        description: error.message || "번역 기록을 가져오는 중 오류가 발생했습니다.",
-        variant: "destructive",
-      })
-      
-      setHistory([])
-    } finally {
-      setLoading(false)
-    }
-  }
   
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text)
@@ -120,40 +51,19 @@ export function HistoryTabContent() {
   const handleDeleteConfirm = async () => {
     if (!deletingItemId) return
     
-    setIsDeleting(true)
-    
     try {
-      const { error } = await supabase
-        .from('translation_history')
-        .delete()
-        .eq('id', deletingItemId)
-      
-      if (error) throw error
-      
-      // UI에서 삭제된 항목 제거
-      setHistory(prev => prev.filter(item => item.id !== deletingItemId))
+      await dispatch(deleteTranslationHistoryItem(deletingItemId)).unwrap()
       
       toast({
         description: "번역 기록이 성공적으로 삭제되었습니다.",
       })
-      
-      // 현재 페이지에 항목이 더 이상 없고 이전 페이지가 있는 경우 이전 페이지로 이동
-      if (history.length === 1 && currentPage > 1) {
-        setCurrentPage(prev => prev - 1)
-      } else if (history.length === 1) {
-        // 다시 조회하여 0개를 표시
-        fetchTranslationHistory()
-      }
-      
     } catch (error: any) {
-      console.error("삭제 오류:", error)
       toast({
-        title: "오류",
-        description: error.message || "항목을 삭제하는 중 오류가 발생했습니다.",
+        title: "삭제 오류",
+        description: error || "항목을 삭제하는 중 오류가 발생했습니다.",
         variant: "destructive",
       })
     } finally {
-      setIsDeleting(false)
       setDeleteDialogOpen(false)
       setDeletingItemId(null)
     }
@@ -161,21 +71,24 @@ export function HistoryTabContent() {
   
   const handlePreviousPage = () => {
     if (currentPage > 1) {
-      setCurrentPage(prev => prev - 1)
+      const newPage = currentPage - 1
+      dispatch(setCurrentPage(newPage))
+      dispatch(fetchTranslationHistory(newPage))
     }
   }
   
   const handleNextPage = () => {
     if (currentPage < totalPages) {
-      setCurrentPage(prev => prev + 1)
+      const newPage = currentPage + 1
+      dispatch(setCurrentPage(newPage))
+      dispatch(fetchTranslationHistory(newPage))
     }
   }
   
-  // 날짜 형식 변환 함수
   const formatDate = (dateString: string) => {
     try {
       return format(new Date(dateString), 'yyyy-MM-dd HH:mm')
-    } catch {
+    } catch (error) {
       return dateString
     }
   }
@@ -188,9 +101,9 @@ export function HistoryTabContent() {
           <CardDescription>Your recent translation activities</CardDescription>
         </CardHeader>
         <CardContent>
-          {loading ? (
+          {isLoading ? (
             <div className="text-center py-8">로딩 중...</div>
-          ) : history.length === 0 ? (
+          ) : items.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               저장된 번역 기록이 없습니다.
             </div>
@@ -209,7 +122,7 @@ export function HistoryTabContent() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {history.map((item) => (
+                  {items.map((item) => (
                     <>
                       <TableRow key={item.id}>
                         <TableCell>{formatDate(item.created_at)}</TableCell>
@@ -293,7 +206,7 @@ export function HistoryTabContent() {
             variant="outline" 
             size="sm"
             onClick={handlePreviousPage}
-            disabled={currentPage <= 1 || loading}
+            disabled={currentPage <= 1 || isLoading}
           >
             이전
           </Button>
@@ -304,7 +217,7 @@ export function HistoryTabContent() {
             variant="outline" 
             size="sm"
             onClick={handleNextPage}
-            disabled={currentPage >= totalPages || loading}
+            disabled={currentPage >= totalPages || isLoading}
           >
             다음
           </Button>
@@ -320,13 +233,12 @@ export function HistoryTabContent() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>취소</AlertDialogCancel>
+            <AlertDialogCancel>취소</AlertDialogCancel>
             <AlertDialogAction 
               onClick={handleDeleteConfirm}
-              disabled={isDeleting}
               className="bg-red-500 hover:bg-red-600"
             >
-              {isDeleting ? "삭제 중..." : "삭제"}
+              삭제
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

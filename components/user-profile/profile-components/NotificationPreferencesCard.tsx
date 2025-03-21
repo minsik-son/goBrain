@@ -1,28 +1,25 @@
+'use client'
+
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
+import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks"
+import { updateUserProfile } from "@/lib/redux/slices/userSlice"
 
 interface NotificationPreferencesCardProps {
-  userID: string
-  userData: {
-    email_notifications: boolean
-    marketing_emails: boolean
-    product_updates: boolean
-  }
-  setUserData: any
   supabase: any
   toast: any
 }
 
 export function NotificationPreferencesCard({ 
-  userID, 
-  userData, 
-  setUserData, 
   supabase, 
   toast 
 }: NotificationPreferencesCardProps) {
+  const userData = useAppSelector(state => state.user)
+  const dispatch = useAppDispatch()
+  
   const [emailNotifications, setEmailNotifications] = useState(false)
   const [marketingEmails, setMarketingEmails] = useState(false)
   const [productUpdates, setProductUpdates] = useState(false)
@@ -36,7 +33,7 @@ export function NotificationPreferencesCard({
   }, [userData])
   
   const handleSavePreferences = async () => {
-    if (!userID) {
+    if (!userData.id) {
       toast({
         title: "오류",
         description: "사용자 정보를 찾을 수 없습니다.",
@@ -48,36 +45,21 @@ export function NotificationPreferencesCard({
     setIsSaving(true)
     
     try {
-      const { error } = await supabase
-        .from('users')
-        .update({
-          email_notifications: emailNotifications,
-          marketing_emails: marketingEmails,
-          product_updates: productUpdates,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', userID)
-      
-      if (error) throw error
-      
-      // 부모 컴포넌트의 상태 업데이트
-      setUserData((prev: any) => ({
-        ...prev,
+      // Redux를 통한 사용자 데이터 업데이트
+      await dispatch(updateUserProfile({
         email_notifications: emailNotifications,
         marketing_emails: marketingEmails,
         product_updates: productUpdates
-      }))
+      })).unwrap()
       
       toast({
         title: "성공",
         description: "알림 설정이 성공적으로 업데이트되었습니다.",
       })
-      
     } catch (error: any) {
-      console.error("알림 설정 업데이트 오류:", error)
       toast({
         title: "오류",
-        description: error.message || "알림 설정을 업데이트하는 중 오류가 발생했습니다.",
+        description: error || "설정 저장 중 오류가 발생했습니다.",
         variant: "destructive"
       })
     } finally {
@@ -91,7 +73,7 @@ export function NotificationPreferencesCard({
         <CardTitle>Notification Preferences</CardTitle>
         <CardDescription>Manage how you receive notifications</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <Label htmlFor="email-notifications">Email Notifications</Label>
@@ -135,7 +117,7 @@ export function NotificationPreferencesCard({
       <CardFooter>
         <Button
           onClick={handleSavePreferences}
-          disabled={isSaving}
+          disabled={isSaving || userData.isLoading}
         >
           {isSaving ? "저장 중..." : "Save Preferences"}
         </Button>
