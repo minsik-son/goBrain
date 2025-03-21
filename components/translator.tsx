@@ -3,11 +3,21 @@
 import { useState, useEffect, useRef } from "react"
 import { useAuth } from "@/lib/contexts/auth-context"
 import { useUser } from "@/lib/contexts/user-context"
-import { Languages, Image, FileText, RotateCcw, X, Volume2, Star, Share2, ChevronDown, CheckCircle2, Copy } from "lucide-react"
+import { Languages, Image, FileText, RotateCcw, X, Volume2, Star, Share2, ChevronDown, CheckCircle2, Copy, Clipboard, ArrowRightLeft } from "lucide-react"
 import { extractDetectedLanguage } from "@/components/detectLanguageAPI"
-
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Label } from "@/components/ui/label"
+import { useToast } from "@/components/ui/use-toast"
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
 
 // 언어 목록 정의
 const languages = [
@@ -96,6 +106,9 @@ export function Translator() {
     detectedCode: string
     current: string
   } | null>(null)
+  const [isSaving, setIsSaving] = useState(false)
+  const [isSaved, setIsSaved] = useState(false)
+  const [userId, setUserId] = useState<string | null>(null)
 
   const sourceTextareaRef = useRef<HTMLTextAreaElement>(null)
   const targetTextareaRef = useRef<HTMLTextAreaElement>(null)
@@ -106,6 +119,8 @@ export function Translator() {
   const { user } = useAuth()
   const { profile } = useUser()
   const isPremium = profile?.plan === "premium" || profile?.plan === "business"
+  const { toast } = useToast()
+  const supabase = createClientComponentClient()
 
   const getMaxInputLength = () => {
     if (!profile) return 10000
@@ -286,8 +301,56 @@ export function Translator() {
     handleCopyText(translatedText, false)
   }
 
-  const handleSaveTranslation = () => {
-    console.log("Save translation:", { sourceText, translatedText, sourceLanguage, targetLanguage })
+  const handleSaveTranslation = async () => {
+    if (!translatedText || !userId) {
+      toast({
+        title: "오류",
+        description: !userId ? "로그인이 필요합니다." : "저장할 번역 내용이 없습니다.",
+        variant: "destructive",
+      })
+      return
+    }
+    
+    setIsSaving(true)
+    
+    try {
+      const wordCount = sourceText.trim().split(/\s+/).length
+      
+      // 실제 저장할 소스 언어 결정
+      // sourceLanguage가 "detect"인 경우 감지된 언어를 사용하고, 아니면 선택된 언어를 사용
+      const actualSourceLanguage = sourceLanguage === "detect"
+        ? detectedLanguageName || "Unknown"  // 감지된 언어 또는 기본값
+        : languages.find(lang => lang.code === sourceLanguage)?.name || sourceLanguage;
+      
+      const { error } = await supabase
+        .from('translation_history')
+        .insert({
+          user_id: userId,
+          source_language: actualSourceLanguage, // 실제 감지된 언어로 저장
+          target_language: languages.find(lang => lang.code === targetLanguage)?.name || targetLanguage,
+          text: sourceText,
+          translated_text: translatedText,
+          word_count: wordCount,
+          created_at: new Date().toISOString()
+        })
+      
+      if (error) throw error
+      
+      setIsSaved(true)
+      toast({
+        description: "번역이 성공적으로 저장되었습니다.",
+      })
+      
+    } catch (error: any) {
+      console.error("번역 저장 오류:", error)
+      toast({
+        title: "저장 오류",
+        description: error.message || "번역 저장 중 오류가 발생했습니다.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   // 같은 언어 선택 방지를 위한 함수 개선
@@ -519,6 +582,19 @@ export function Translator() {
       isDetecting
     });
   }, [detectedLanguageCode, detectedLanguageName, isDetecting]);
+
+  // 사용자 정보 가져오기
+  useEffect(() => {
+    const fetchUser = async () => {
+      const { data, error } = await supabase.auth.getSession()
+      if (data.session) {
+        const { data: userData } = await supabase.auth.getUser()
+        setUserId(userData.user?.id || null)
+      }
+    }
+    
+    fetchUser()
+  }, [supabase])
 
   return (
     <div className="w-full max-w-6xl mx-auto bg-white rounded-xl shadow-sm border">
@@ -752,8 +828,10 @@ export function Translator() {
                     <button
                       className="text-gray-500 hover:text-gray-700"
                       onClick={handleSaveTranslation}
+                      disabled={isSaving || isSaved || !userId}
+                      title={!userId ? "로그인이 필요합니다" : "번역 기록 저장"}
                     >
-                      <Star className="h-5 w-5" />
+                      <Star className={`h-5 w-5 ${isSaved ? "fill-yellow-400 text-yellow-400" : ""}`} />
                     </button>
                     <button className="text-gray-500 hover:text-gray-700">
                       <Share2 className="h-5 w-5" />

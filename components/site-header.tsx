@@ -12,6 +12,7 @@ import LoginButton from "@/components/auth/LoginButton"
 import LogoutButton from "@/components/auth/LogoutButton"
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
 import { ChevronDown, ChevronUp } from "lucide-react"
+import { useRouter } from "next/navigation"
 
 export function SiteHeader() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
@@ -21,6 +22,7 @@ export function SiteHeader() {
   const [userID, setUserID] = useState<any>(null)
   const [dropdownOpen, setDropdownOpen] = useState(false) // 드롭다운 상태 관리
   const supabase = createClientComponentClient()
+  const router = useRouter() // useRouter 추가
 
 /* 
 기존 useEffect 코드
@@ -65,6 +67,7 @@ useEffect(() => {
     }
 
     if (data.session) {
+      console.log("data.session", data.session)
       const { data: userData, error: userError } = await supabase.auth.getUser()
       if (userError) {
         console.error("유저 정보를 가져오지 못함:", userError);
@@ -131,6 +134,13 @@ useEffect(() => {
     };
   }, [dropdownOpen]);
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+    setIsLoggedIn(false)
+    setUser(null)
+    router.push('/') // 로그아웃 후 메인 페이지로 리디렉션
+  }
+  
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background">
       <div className="flex h-16 items-center space-x-4 sm:justify-between sm:space-x-0 bg-cyan-950 text-white px-10">
@@ -161,11 +171,7 @@ useEffect(() => {
                       </li>
                       <li>
                         <button
-                          onClick={async () => {
-                            await supabase.auth.signOut()
-                            setIsLoggedIn(false)
-                            setUser(null)
-                          }}
+                          onClick={handleLogout}
                           className="w-full text-left block px-4 py-2 hover:bg-gray-100"
                         >
                           Logout
