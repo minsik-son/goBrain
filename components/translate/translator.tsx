@@ -923,7 +923,7 @@ export function Translator() {
                         "justify-between",
                         sourceLanguage === language.code && "font-semibold"
                       )}
-                      onClick={() => setSourceLanguage(language.code)}
+                      onClick={() => setSourceLanguage(language.name)}
                     >
                       {language.name}
                       {sourceLanguage === language.code && (
