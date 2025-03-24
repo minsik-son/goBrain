@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/contexts/auth-context"
 import { useUser } from "@/lib/contexts/user-context"
 import { cn } from "@/lib/utils"
 
-import { Languages, Image, FileText, RotateCcw, X, Volume2, Star, Share2, ChevronDown, CheckCircle2, Copy, Clipboard, ArrowRightLeft, Check, ArrowRight } from "lucide-react"
+import { Languages, Image, FileText, RotateCcw, X, Volume2, Star, Share2, ChevronDown, CheckCircle2, Copy, Clipboard, ArrowRightLeft, Check, ArrowRight, FileCheck, RefreshCw, Download } from "lucide-react"
 import { extractDetectedLanguage } from "@/components/detectLanguageAPI"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -21,6 +21,14 @@ import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/use-toast"
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Loader2 } from "lucide-react"
+import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks"
+import { 
+  fetchUserPlanAndLimits, 
+  uploadAndTranslateDocument, 
+  resetTranslation 
+} from "@/lib/redux/slices/documentTranslationSlice"
+import { getLanguageNameFromCode } from "@/lib/utils/language-utils"
 
 // 언어 목록 정의
 const languages = [
@@ -112,6 +120,7 @@ export function Translator() {
   const [isSaving, setIsSaving] = useState(false)
   const [isSaved, setIsSaved] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const sourceTextareaRef = useRef<HTMLTextAreaElement>(null)
   const targetTextareaRef = useRef<HTMLTextAreaElement>(null)
@@ -126,10 +135,11 @@ export function Translator() {
   const supabase = createClientComponentClient()
 
   const getMaxInputLength = () => {
-    if (!profile) return 10000
+    if (!profile) return 500
     switch(profile.plan) {
-      case 'premium': return 3000
-      case 'business': return 5000
+      case 'Starter' : return 1000
+      case 'Creator': return 3000
+      case 'Master': return 5000
       default: return 10000
     }
   }
@@ -599,6 +609,193 @@ export function Translator() {
     fetchUser()
   }, [supabase])
 
+  // Redux 관련 코드
+  const dispatch = useAppDispatch();
+  const {
+    isUploading,
+    uploadStep,
+    currentTranslation,
+    userPlan,
+    translationsLeft,
+    canTranslate,
+    error: documentError
+  } = useAppSelector(state => state.documentTranslation);
+  
+  // 사용자 ID가 있을 때 문서 번역 제한 정보 가져오기
+  useEffect(() => {
+    if (userId) {
+      dispatch(fetchUserPlanAndLimits(userId));
+    }
+  }, [userId, dispatch]);
+  
+  // 상태 추가
+  const [isDragging, setIsDragging] = useState(false);
+
+  // 드래그 앤 드롭 핸들러 함수 추가
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    
+    if (!userId || !canTranslate) return;
+    
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      const file = files[0];
+      const fileExtension = file.name.split('.').pop()?.toLowerCase();
+      if (['pdf', 'docx', 'txt'].includes(fileExtension || '')) {
+        // 파일 input의 files 속성을 직접 설정할 수 없으므로 
+        // 함수에 파일을 직접 전달합니다
+        handleFileUpload(file);
+      } else {
+        console.log("지원하지않는 파일형식")
+        toast({
+          title: "지원되지 않는 파일 형식",
+          description: "PDF, DOCX, TXT 형식의 파일만 지원합니다.",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+  // 기존 handleDocumentUpload 함수 수정
+  const handleDocumentUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleFileUpload(file);
+    }
+  };
+
+  // 간단한 알림 함수
+  const showAlert = (message: string) => {
+    const alertElement = document.createElement('div');
+    alertElement.style.position = 'fixed';
+    alertElement.style.bottom = '20px';
+    alertElement.style.right = '20px';
+    alertElement.style.padding = '10px 20px';
+    alertElement.style.backgroundColor = '#333';
+    alertElement.style.color = 'white';
+    alertElement.style.borderRadius = '4px';
+    alertElement.style.zIndex = '9999';
+    alertElement.textContent = message;
+    
+    document.body.appendChild(alertElement);
+    
+    setTimeout(() => {
+      alertElement.style.opacity = '0';
+      alertElement.style.transition = 'opacity 0.5s';
+      setTimeout(() => {
+        document.body.removeChild(alertElement);
+      }, 500);
+    }, 3000);
+  };
+
+  // toast 대신 showAlert 사용
+  const handleFileUpload = (file: File) => {
+    if (!userId) return;
+    
+    dispatch(uploadAndTranslateDocument({
+      file,
+      userId,
+      sourceLanguage,
+      targetLanguage,
+      userPlan
+    }))
+    .unwrap()
+    .then(() => {
+      showAlert("문서 번역이 완료되었습니다.");
+    })
+    .catch((error) => {
+      showAlert(`오류: ${error || "문서 번역 중 오류가 발생했습니다."}`);
+    });
+  };
+  
+  // 번역된 문서 다운로드
+  const handleDocumentDownload = async (fileUrl: string) => {
+    try {
+      const response = await fetch(fileUrl);
+      if (!response.ok) throw new Error("파일을 가져오는 데 실패했습니다");
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = currentTranslation?.document_name.replace(/\.[^.]+$/, '') + '_translated' + 
+                  currentTranslation?.document_name.substring(currentTranslation.document_name.lastIndexOf('.'));
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      a.remove();
+    } catch (error: any) {
+      console.error("Download error:", error);
+      toast({
+        title: "다운로드 오류",
+        description: error.message || "파일 다운로드 중 오류가 발생했습니다.",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  // Redux 디버깅을 위한 useEffect 추가
+  useEffect(() => {
+    console.log("Redux 문서 번역 상태:", {
+      userId,
+      userPlan,
+      canTranslate,
+      translationsLeft
+    });
+  }, [userId, userPlan, canTranslate, translationsLeft]);
+
+  // userId 설정 부분 수정
+  useEffect(() => {
+    if (user?.id) {
+      setUserId(user.id);
+      console.log("사용자 ID 설정됨:", user.id);
+      dispatch(fetchUserPlanAndLimits(user.id));
+    }
+  }, [user, dispatch]);
+
+  // 디버깅용 코드 추가
+  useEffect(() => {
+    if (userId) {
+      console.log("문서 번역 상태 확인:", {
+        userId,
+        userPlan,
+        canTranslate,
+        translationsLeft
+      });
+    }
+  }, [userId, userPlan, canTranslate, translationsLeft]);
+
+  // toast 함수가 제대로 불러와졌는지 확인
+  useEffect(() => {
+    console.log("Toast 함수 확인:", toast);
+    
+    // 테스트 toast 호출
+    try {
+      toast({
+        title: "테스트 알림",
+        description: "이 메시지가 보이면 toast가 작동합니다.",
+      });
+      console.log("Toast 호출 성공");
+    } catch (error) {
+      console.error("Toast 호출 실패:", error);
+    }
+  }, [toast]);
+
+  // JSX 부분 예시
   return (
     <div className="w-full max-w-6xl mx-auto bg-white rounded-xl shadow-sm border">
       <Tabs defaultValue="text" value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -923,7 +1120,7 @@ export function Translator() {
                         "justify-between",
                         sourceLanguage === language.code && "font-semibold"
                       )}
-                      onClick={() => setSourceLanguage(language.name)}
+                      onClick={() => setSourceLanguage(language.code)}
                     >
                       {language.name}
                       {sourceLanguage === language.code && (
@@ -941,7 +1138,7 @@ export function Translator() {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" className="w-[200px] justify-between">
-                    {languages.find(l => l.code === targetLanguage)?.name || "타겟 언어"}
+                    {languages.find(lang => lang.code === targetLanguage)?.name || getLanguageNameFromCode(targetLanguage as any)}
                     <ChevronDown className="h-4 w-4 opacity-50" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -966,21 +1163,116 @@ export function Translator() {
             </div>
           </div>
 
-          <div className="text-center py-12 border-2 border-dashed rounded-lg">
-            <FileText className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-            <h3 className="text-lg font-medium mb-2">
-              번역할 문서를 업로드하세요
-            </h3>
-            <p className="text-sm text-gray-500 mb-4">
-              지원 형식: PDF, DOCX, TXT
-            </p>
-            <Button>문서 업로드</Button>
-            {!isPremium && (
-              <p className="text-xs text-amber-600 mt-4">
-                무료 티어는 1MB 문서로 제한됩니다. 더 큰 파일은 업그레이드하세요.
+          {isUploading ? (
+            <div className="text-center py-16 border-2 rounded-lg">
+              <Loader2 className="h-8 w-8 mx-auto text-primary animate-spin mb-4" />
+              <h3 className="text-lg font-medium mb-2">
+                {uploadStep === 'uploading' && '문서 업로드 중...'}
+                {uploadStep === 'extracting' && '텍스트 추출 중...'}
+                {uploadStep === 'translating' && '번역 중...'}
+                {uploadStep === 'generating' && '번역 문서 생성 중...'}
+              </h3>
+              <p className="text-sm text-gray-500">
+                파일 크기에 따라 다소 시간이 걸릴 수 있습니다.
               </p>
-            )}
-          </div>
+            </div>
+          ) : currentTranslation ? (
+            <div className="p-6 space-y-6">
+              <div className="bg-muted/50 p-4 rounded-lg">
+                <h3 className="text-lg font-medium mb-2 flex items-center">
+                  <FileCheck className="h-5 w-5 mr-2 text-green-500" />
+                  번역 완료
+                </h3>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <p className="text-sm font-medium">원본 문서</p>
+                    <p className="text-sm text-muted-foreground">{currentTranslation.document_name}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">언어</p>
+                    <p className="text-sm text-muted-foreground">
+                      {currentTranslation.source_language} → {currentTranslation.target_language}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center">
+                  <Button
+                    onClick={() => dispatch(resetTranslation())}
+                    variant="outline"
+                    size="sm"
+                  >
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    새 문서 번역
+                  </Button>
+                  <Button
+                    onClick={() => handleDocumentDownload(currentTranslation.translated_file_url)}
+                    size="sm"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    번역 문서 다운로드
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div 
+              className={cn(
+                "text-center py-12 border-2 border-dashed rounded-lg transition-colors",
+                isDragging ? "border-primary bg-primary/5" : "border-muted-foreground/20",
+                !userId || !canTranslate ? "opacity-60" : ""
+              )}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
+              <input
+                type="file"
+                id="document-upload"
+                className="hidden"
+                accept=".pdf,.docx,.txt"
+                onChange={handleDocumentUpload}
+                ref={fileInputRef}
+              />
+              <FileText className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+              <h3 className="text-lg font-medium mb-2">
+                {isDragging ? "파일을 여기에 놓으세요" : "번역할 문서를 업로드하세요"}
+              </h3>
+              <p className="text-sm text-gray-500 mb-4">
+                지원 형식: PDF, DOCX, TXT
+              </p>
+              <div className="space-y-4">
+                <Button 
+                  onClick={() => fileInputRef.current?.click()} 
+                  disabled={!userId || !canTranslate}
+                >
+                  문서 업로드
+                </Button>
+                {!userId ? (
+                  <p className="text-xs text-amber-600 mt-4">
+                    문서 번역을 위해 로그인이 필요합니다.
+                  </p>
+                ) : userPlan === "Explorer" ? (
+                  <p className="text-xs text-amber-600 mt-4">
+                    Explorer 플랜에서는 문서 번역을 사용할 수 없습니다. 업그레이드하세요.
+                  </p>
+                ) : userPlan === "Starter" ? (
+                  <p className="text-xs text-amber-600 mt-4">
+                    {translationsLeft > 0 
+                      ? `무료 티어는 하루 2번, 최대 1MB 문서로 제한됩니다. 오늘 남은 횟수: ${translationsLeft}` 
+                      : "오늘 문서 번역 횟수를 모두 사용했습니다. 내일 다시 시도하세요."}
+                  </p>
+                ) : userPlan === "Creator" ? (
+                  <p className="text-xs text-amber-600 mt-4">
+                    Creator 플랜은 최대 5MB 문서까지 지원합니다.
+                  </p>
+                ) : (
+                  <p className="text-xs text-amber-600 mt-4">
+                    Master 플랜은 최대 20MB 문서까지 지원합니다.
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>
