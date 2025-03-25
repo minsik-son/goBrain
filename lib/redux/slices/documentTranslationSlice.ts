@@ -1,3 +1,4 @@
+
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
@@ -156,8 +157,6 @@ export const uploadAndTranslateDocument = createAsyncThunk(
       }
       // 4. 텍스트 추출
       dispatch(setUploadStep('extracting'));
-      
-      // 원래 코드로 복원
       const apiUrl = `${window.location.origin}/api/extract-text`;
       console.log('API 요청 URL:', apiUrl);
       
@@ -181,6 +180,7 @@ export const uploadAndTranslateDocument = createAsyncThunk(
       }
       
       const { text } = await extractResponse.json();
+      console.log("텍스트는: ", text)
       
       // 5. 번역
       dispatch(setUploadStep('translating'));
@@ -217,7 +217,7 @@ export const uploadAndTranslateDocument = createAsyncThunk(
           targetLanguage
         })
       });
-      
+    
       if (!generateResponse.ok) {
         const errorData = await generateResponse.json();
         throw new Error(errorData.error || '문서 생성에 실패했습니다.');

@@ -136,6 +136,7 @@ export function Translator() {
 
   const getMaxInputLength = () => {
     if (!profile) return 500
+    if (userId === "5027a0bf-89e2-4ce2-9289-336986950758") return 1000000 //테스트용 ID
     switch(profile.plan) {
       case 'Starter' : return 1000
       case 'Creator': return 3000
