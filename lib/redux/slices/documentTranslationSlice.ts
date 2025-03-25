@@ -1,4 +1,3 @@
-
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
@@ -185,14 +184,27 @@ export const uploadAndTranslateDocument = createAsyncThunk(
       // 5. 번역
       dispatch(setUploadStep('translating'));
       
+      console.log("번역 API 요청 데이터:", {
+        inputText: text?.substring(0, 100) + "...",
+        inputLanguage: sourceLanguage || 'auto',
+        outputLanguage: targetLanguage,
+        fileType: fileType,
+        fileUrl: urlData?.signedUrl?.substring(0, 50) + "..."
+      });
+      
+      const requestBody = {
+        inputText: text,
+        inputLanguage: sourceLanguage || 'auto',
+        outputLanguage: targetLanguage,
+        fileType: fileType,
+        fileUrl: urlData.signedUrl
+      };
+      console.log("최종 API 요청 데이터:", JSON.stringify(requestBody).substring(0, 200) + "...");
+      
       const translateResponse = await fetch('/api/translate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text,
-          sourceLanguage: sourceLanguage || 'auto',
-          targetLanguage
-        })
+        body: JSON.stringify(requestBody),
       });
       
       if (!translateResponse.ok) {

@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { cookies } from 'next/headers';
+
 import PDFDocument from 'pdfkit';
 import { Document, Packer, Paragraph, TextRun } from 'docx';
 import { DateTime } from 'luxon';
+
 
 export const config = {
   api: {
@@ -11,19 +14,33 @@ export const config = {
     },
   },
 };
-
+  
 export async function POST(request: NextRequest) {
   try {
-    const { translatedText, originalFileName, fileType, userId } = await request.json();
+    const body = await request.json()
+    console.log("문서생성:", body)
+    const { translatedText, originalFileName, fileType } = body
 
-    if (!translatedText || !originalFileName || !fileType || !userId) {
+    if (!translatedText || !originalFileName || !fileType) {
       return NextResponse.json(
         { error: "Missing required parameters" },
         { status: 400 }
       );
     }
 
-    const supabase = createClientComponentClient();
+    const supabase = createRouteHandlerClient({ cookies });
+
+    const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      
+      if (!user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+      
+      const userId = user.id;
+      console.log("Auth 유저 ID", userId)
+      
 
     // 번역된 파일 생성
     let fileBuffer: Buffer;
@@ -33,6 +50,7 @@ export async function POST(request: NextRequest) {
     const translatedFileName = `${fileNameWithoutExt}_translated${fileExt}`;
     
     // 파일 형식에 따라 문서 생성
+    //아직 UI 디자인 구현까지는 안될 가능성 있음
     switch (fileType.toLowerCase()) {
       case 'pdf':
         fileBuffer = await generatePDF(translatedText);

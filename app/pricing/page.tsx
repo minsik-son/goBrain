@@ -35,7 +35,6 @@ const plans = [
     features: [
       "5,000 characters per translation",
       "50 translations per day",
-      "Enhanced AI Translation Model",
       "Pronunciation speaker",
       "Save translation history",
       "Document translation (Word/PDF, up to 100MB)",
@@ -50,11 +49,10 @@ const plans = [
     features: [
       "Unlimited characters per translation",
       "Unlimited translations",
-      "Enhanced AI Translation Model",
       "Pronunciation speaker",
       "Microphone input for speech translation",
       "Real-time conversation translation",
-      "Document translation (Word/PDF, up to 1GB)",
+      "Document translation (Word/PDF, up to 500MB)",
     ],
     highlighted: false,
   },
