@@ -1,11 +1,11 @@
 현재까지 진행상황:
+txt 번역 기능 구현
 extract-text/route.ts에서 pdf-parse부분 에러 (현재는 주석처리)
-txt파일 업로드시 supabase에 업로드 성공 - 텍스트 추출도 성공 - 하지만 api/translate에서 400 에러가 발생 (필수필드가 누락, ducumentTranslationSlice.ts 183에서 어떤 정보를 가져오는지 확인중)
+
 
 할부분:
-1. api/translate 400 에러 해결 : 어떤 필수필드가 누락되는지 확인필요
-2. pdf-parse가 동작할때 404반환되는 이유찾고 해결
-3. docx는 404에러는 안나지만 텍스트 추출에 실패
+1. docx 구현
+2. pdf 구현
 
 나중에 추가할 기능:
 1.유튜브 영상 먼저 읽고 소리 텍스트 추출, 그리고 자막 만들어서 다시 배포하는 기능

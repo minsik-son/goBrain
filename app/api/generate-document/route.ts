@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     console.log("문서생성:", body)
-    const { translatedText, originalFileName, fileType } = body
+    const { translatedText, originalFileName, fileType, sourceLanguage, targetLanguage } = body
 
     if (!translatedText || !originalFileName || !fileType) {
       return NextResponse.json(
@@ -92,16 +92,29 @@ export async function POST(request: NextRequest) {
 
     // 문서 번역 메타데이터 저장
     const expiresAt = DateTime.now().plus({ hours: 24 }).toISO();
-    const sourceLanguage = ""; // 클라이언트에서 받아와야 함
-    const targetLanguage = ""; // 클라이언트에서 받아와야 함
+    
+    const languageMap: { [key: string]: string } = {
+        en: "English",
+        es: "Spanish",
+        fr: "French",
+        de: "German",
+        it: "Italian",
+        ja: "Japanese",
+        ko: "Korean",
+        zh: "Chinese",
+        // 필요한 다른 언어 추가
+    };
+    const newSourceLanguage = languageMap[sourceLanguage] || "Unknown";
+    const newTargetLanguage = languageMap[targetLanguage] || "Unknown";
+
 
     const { data: metaData, error: metaError } = await supabase
       .from('document_translations')
       .insert({
         user_id: userId,
         document_name: originalFileName,
-        source_language: sourceLanguage || "Unknown",
-        target_language: targetLanguage || "Unknown",
+        source_language: newSourceLanguage || "Unknown",
+        target_language: newTargetLanguage || "Unknown",
         file_url: "", // 원본 파일 URL (필요하면 추가)
         file_size: fileBuffer.length,
         created_at: new Date().toISOString(),

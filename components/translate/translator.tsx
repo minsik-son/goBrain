@@ -621,6 +621,7 @@ export function Translator() {
     canTranslate,
     error: documentError
   } = useAppSelector(state => state.documentTranslation);
+  console.log("Unknown이 왜뜨는지 체크용: ", currentTranslation)
   
   // 사용자 ID가 있을 때 문서 번역 제한 정보 가져오기
   useEffect(() => {
