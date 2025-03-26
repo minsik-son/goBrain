@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from "react"
 import { useAuth } from "@/lib/contexts/auth-context"
 import { useUser } from "@/lib/contexts/user-context"
 import { cn } from "@/lib/utils"
-
 import { Languages, Image, FileText, RotateCcw, X, Volume2, Star, Share2, ChevronDown, CheckCircle2, Copy, Clipboard, ArrowRightLeft, Check, ArrowRight, FileCheck, RefreshCw, Download } from "lucide-react"
 import { extractDetectedLanguage } from "@/components/detectLanguageAPI"
 import { Card, CardContent } from "@/components/ui/card"
@@ -29,6 +28,7 @@ import {
   resetTranslation 
 } from "@/lib/redux/slices/documentTranslationSlice"
 import { getLanguageNameFromCode } from "@/lib/utils/language-utils"
+import { LanguageSelector } from "./language-selector"
 
 // 언어 목록 정의
 const languages = [
@@ -799,7 +799,9 @@ export function Translator() {
 
   // JSX 부분 예시
   return (
+   
     <div className="w-full max-w-6xl mx-auto bg-white rounded-xl shadow-sm border">
+       
       <Tabs defaultValue="text" value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid grid-cols-3 mb-2">
           <TabsTrigger value="text" className="flex items-center gap-2">
@@ -831,6 +833,7 @@ export function Translator() {
                       setShowTargetLanguageDropdown(false);
                     }}
                   >
+                    
                     {sourceLanguage === "detect" ? (
                       <>
                         {detectedLanguageName ? (
@@ -1094,6 +1097,7 @@ export function Translator() {
         </TabsContent>
 
         <TabsContent value="document" className="mt-0">
+          {/** 
           <div className="flex items-center justify-between p-4 border-b">
             <div className="flex items-center gap-2 flex-1">
               <DropdownMenu>
@@ -1164,7 +1168,15 @@ export function Translator() {
               </DropdownMenu>
             </div>
           </div>
-
+          */}
+          <LanguageSelector 
+        sourceLanguage={sourceLanguage}
+        targetLanguage={targetLanguage}
+        onSourceLanguageChange={handleSourceLanguageChange}
+        onTargetLanguageChange={handleTargetLanguageChange}
+        onReloadClick={() => console.log("Reload clicked")}
+        activeTab="document"
+        />
           {isUploading ? (
             <div className="text-center py-16 border-2 rounded-lg">
               <Loader2 className="h-8 w-8 mx-auto text-primary animate-spin mb-4" />

@@ -18,7 +18,6 @@ export const config = {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    console.log("문서생성:", body)
     const { translatedText, originalFileName, fileType, sourceLanguage, targetLanguage } = body
 
     if (!translatedText || !originalFileName || !fileType) {
@@ -39,7 +38,6 @@ export async function POST(request: NextRequest) {
       }
       
       const userId = user.id;
-      console.log("Auth 유저 ID", userId)
       
 
     // 번역된 파일 생성
@@ -93,6 +91,7 @@ export async function POST(request: NextRequest) {
     // 문서 번역 메타데이터 저장
     const expiresAt = DateTime.now().plus({ hours: 24 }).toISO();
     
+    
     const languageMap: { [key: string]: string } = {
         en: "English",
         es: "Spanish",
@@ -102,8 +101,16 @@ export async function POST(request: NextRequest) {
         ja: "Japanese",
         ko: "Korean",
         zh: "Chinese",
-        // 필요한 다른 언어 추가
+        pt: "Portuguese",
+        ru: "Russian",
+        ar: "Arabic",
+        vi: "Vietnamese",
+        th: "Thai",
+        hi: "Hindi",
+        tr: "Turkish",
+        id: "Indonesian",
     };
+
     const newSourceLanguage = languageMap[sourceLanguage] || "Unknown";
     const newTargetLanguage = languageMap[targetLanguage] || "Unknown";
 

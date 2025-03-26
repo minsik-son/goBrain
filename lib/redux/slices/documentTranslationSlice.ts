@@ -239,6 +239,7 @@ export const uploadAndTranslateDocument = createAsyncThunk(
       
       // 7. Starter 플랜 사용량 업데이트
       if (userPlan === 'Starter') {
+        console.log("사용량 업데이트 시작")
         const today = new Date().toISOString().split('T')[0];
         
         const { data: existingUsage, error: checkError } = await supabase
