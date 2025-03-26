@@ -294,7 +294,7 @@ export function Translator() {
       abortControllerRef.current = null
     }
   }
-
+  //copy 버튼
   const handleCopyText = async (text: string, isSource: boolean = false) => {
     if (!text) return
     try {
@@ -621,7 +621,6 @@ export function Translator() {
     canTranslate,
     error: documentError
   } = useAppSelector(state => state.documentTranslation);
-  console.log("Unknown이 왜뜨는지 체크용: ", currentTranslation)
   
   // 사용자 ID가 있을 때 문서 번역 제한 정보 가져오기
   useEffect(() => {

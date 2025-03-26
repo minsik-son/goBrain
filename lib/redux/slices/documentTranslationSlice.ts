@@ -180,7 +180,7 @@ export const uploadAndTranslateDocument = createAsyncThunk(
       
       const { text } = await extractResponse.json();
       console.log("텍스트는: ", text)
-      
+      console.log("파일 사이즈는: ", fileSizeInMB)
       // 5. 번역
       dispatch(setUploadStep('translating'));
       

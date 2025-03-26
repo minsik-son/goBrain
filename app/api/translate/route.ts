@@ -15,14 +15,28 @@ export async function POST(req: Request) {
     
     // 파일 확장자와 요청 필드를 기반으로 번역 유형 결정
     if (body.fileType) {  // fileType이 있으면 무조건 문서 번역으로 처리
-      console.log("문서 번역 요청 감지: 파일 유형 =", body.fileType);
-      return handleDocumentTranslation({
-        text: body.inputText,  // 파라미터 이름 변환
-        sourceLanguage: body.inputLanguage,
-        targetLanguage: body.outputLanguage,
-        fileType: body.fileType,
-        fileUrl: body.fileUrl
-      });
+      if (body.fileType === "txt") {
+          console.log("문서 번역 요청 감지: 파일 유형 =", body.fileType);
+          return handleDocumentTranslation({
+          text: body.inputText,  // 파라미터 이름 변환
+          sourceLanguage: body.inputLanguage,
+          targetLanguage: body.outputLanguage,
+          fileType: body.fileType,
+          fileUrl: body.fileUrl
+        });
+      }
+      else if (body.fileType === 'docx') {
+        console.log("docx 파일이 감지됐습니다.", body.fileType)
+        console.log("가져온 파일: ", body)
+        return handleDocumentTranslation({
+          text: body.inputText,  // 파라미터 이름 변환
+          sourceLanguage: body.inputLanguage,
+          targetLanguage: body.outputLanguage,
+          fileType: body.fileType,
+          fileUrl: body.fileUrl
+        });
+      }
+      
     } else if (body.inputText !== undefined) {
       console.log("일반 텍스트 번역 요청 감지");
       return handleTextTranslation(body);
