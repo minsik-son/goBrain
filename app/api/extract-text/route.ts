@@ -1,6 +1,5 @@
 
 import { NextRequest, NextResponse } from 'next/server';
-import pdf from 'pdf-parse';
 import mammoth from 'mammoth';
 import { JSDOM } from 'jsdom'
 

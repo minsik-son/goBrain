@@ -29,6 +29,7 @@ import {
 } from "@/lib/redux/slices/documentTranslationSlice"
 import { getLanguageNameFromCode } from "@/lib/utils/language-utils"
 import { LanguageSelector } from "./language-selector"
+import { LoadingDots } from "./LoadingDots"
 
 // 언어 목록 정의
 const languages = [
@@ -147,19 +148,41 @@ export function Translator() {
 
   const maxInputLength = getMaxInputLength()
 
+  // 로딩 상태 관리를 위한 state 추가
+  const [isLoadingTranslation, setIsLoadingTranslation] = useState(false);
+  const translationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   const handleSourceTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const text = e.target.value
-    if (text.length > maxInputLength) return
-    setSourceText(text)
-    setCharacterCount(text.length)
-    if (text === "") {
-      setTranslatedText("")
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort()
-        abortControllerRef.current = null
+    const newText = e.target.value;
+    setSourceText(newText);
+    setCharacterCount(newText.length);
+    
+    // 입력값이 변경되면 로딩 상태 설정
+    if (newText.trim()) {
+      setIsLoadingTranslation(true);
+      
+      // 이미 번역된 결과가 있으면 지워줌
+      if (translatedText) {
+        setTranslatedText("");
+      }
+      
+      // 입력이 멈추면 번역 시작 (디바운싱)
+      if (translationTimeoutRef.current) {
+        clearTimeout(translationTimeoutRef.current);
+      }
+      
+      translationTimeoutRef.current = setTimeout(() => {
+        translateText();
+      }, 1000); // 1초 후 번역 시작
+    } else {
+      // 입력값이 없으면 번역 결과도 비움
+      setIsLoadingTranslation(false);
+      setTranslatedText("");
+      if (translationTimeoutRef.current) {
+        clearTimeout(translationTimeoutRef.current);
       }
     }
-  }
+  };
 
   // 언어 감지 과정 제어를 위한 상태 추가
   const [isDetecting, setIsDetecting] = useState(false);
@@ -1007,13 +1030,19 @@ export function Translator() {
               )}
 
               <div className="relative">
-                <textarea
-                  ref={targetTextareaRef}
-                  readOnly
-                  placeholder={isTranslating ? "번역 중..." : "번역 결과가 여기에 표시됩니다"}
-                  className="w-full p-4 pb-16 min-h-[300px] resize-none border-0 focus:ring-0 focus:outline-none bg-white"
-                  value={translatedText}
-                />
+                {isLoadingTranslation && !translatedText ? (
+                  <div className="w-full h-56 flex items-center justify-center">
+                    <LoadingDots />
+                  </div>
+                ) : (
+                  <textarea
+                    className="w-full h-56 p-3 rounded-lg resize-none border-0"
+                    placeholder="번역된 텍스트가 여기에 표시됩니다."
+                    value={translatedText}
+                    onChange={() => {}}
+                    readOnly
+                  />
+                )}
                 {translatedText && (
                   <div className="absolute bottom-3 right-3 flex gap-3">
                     <button className="text-gray-500 hover:text-gray-700">

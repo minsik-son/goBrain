@@ -178,33 +178,54 @@ export const uploadAndTranslateDocument = createAsyncThunk(
         throw new Error(`텍스트 추출에 실패했습니다. 상태: ${extractResponse.status}`);
       }
       
-      const { text } = await extractResponse.json();
-      console.log("텍스트는: ", text)
-      console.log("파일 사이즈는: ", fileSizeInMB)
+      // 파일 유형에 따른 처리
+      let extractedContent;
+      if (fileType.toLowerCase() === 'txt') {
+        // TXT 파일 처리
+        const { text } = await extractResponse.json();
+        console.log("텍스트는: ", text);
+        console.log("파일 사이즈는: ", fileSizeInMB);
+        extractedContent = { text };
+      } else if (fileType.toLowerCase() === 'docx') {
+        // DOCX 파일 처리
+        const { html, text } = await extractResponse.json();
+        console.log("DOCX 처리: HTML 및 텍스트 추출 완료");
+        extractedContent = { html, text };
+      } else if (fileType.toLowerCase() === 'pdf') {
+        // PDF 파일 처리 (추후 구현)
+        const { text } = await extractResponse.json();
+        extractedContent = { text };
+        console.log("PDF 처리: 아직 구현 중입니다.");
+      }
+      
       // 5. 번역
       dispatch(setUploadStep('translating'));
       
-      console.log("번역 API 요청 데이터:", {
-        inputText: text?.substring(0, 100) + "...",
-        inputLanguage: sourceLanguage || 'auto',
-        outputLanguage: targetLanguage,
-        fileType: fileType,
-        fileUrl: urlData?.signedUrl?.substring(0, 50) + "..."
-      });
-      
-      const requestBody = {
-        inputText: text,
+      // 번역 요청 데이터 구성
+      const translationRequestBody = {
+        inputText: extractedContent.text,
         inputLanguage: sourceLanguage || 'auto',
         outputLanguage: targetLanguage,
         fileType: fileType,
         fileUrl: urlData.signedUrl
       };
-      console.log("최종 API 요청 데이터:", JSON.stringify(requestBody).substring(0, 200) + "...");
+      
+      // DOCX의 경우 HTML도 함께 전송
+      if (fileType.toLowerCase() === 'docx' && extractedContent.html) {
+        translationRequestBody.html = extractedContent.html;
+      }
+      
+      console.log("번역 API 요청 데이터:", {
+        inputText: extractedContent.text?.substring(0, 100) + "...",
+        inputLanguage: sourceLanguage || 'auto',
+        outputLanguage: targetLanguage,
+        fileType: fileType
+      });
       
       const translateResponse = await fetch('/api/translate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody),
+        body: JSON.stringify(translationRequestBody),
       });
       
       if (!translateResponse.ok) {
