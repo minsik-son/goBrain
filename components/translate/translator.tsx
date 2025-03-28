@@ -50,7 +50,13 @@ import {
 } from "@/lib/redux/slices/documentTranslationSlice"
 import { getLanguageNameFromCode } from "@/lib/utils/language-utils"
 import { LanguageSelector } from "./language-selector"
-import { LoadingDots } from "./hooks/LoadingDots"
+import { LoadingDots } from "./LoadingDots"
+import { usePreferredLanguage } from "./hooks/usePreferredLanguage"
+import { useDetectLanguage } from "./hooks/useDetectLanguage"
+import { useSameLanguagePrevention } from "./hooks/useSameLanguagePrevention"
+import { useTextCopy } from "./hooks/useTextCopy"
+import { useTranslationSave } from "./hooks/useTranslationSave"
+import { useDocumentTranslation } from "./hooks/useDocumentTranslation"
 
 // 언어 목록 정의
 const languages = [
@@ -92,27 +98,6 @@ const langNames: { [key: string]: string } = {
   ru: "Russian",
 }
 
-// 간단한 클라이언트 측 언어 감지 함수
-const simpleDetectLanguage = (text: string) => {
-  const patterns = {
-    en: /^[a-zA-Z\s.,!?'"-]+$/,
-    ko: /[\uAC00-\uD7AF]/,
-    ja: /[\u3040-\u309F\u30A0-\u30FF]/,
-    zh: /[\u4E00-\u9FFF]/,
-    es: /[áéíóúüñ¿¡]/i,
-    fr: /[àâäæçéèêëîïôœùûüÿ]/i,
-    de: /[äöüß]/i,
-    ru: /[а-яА-ЯёЁ]/,
-  }
-
-  for (const [code, pattern] of Object.entries(patterns)) {
-    if (pattern.test(text)) {
-      return { code, name: langNames[code as keyof typeof langNames] }
-    }
-  }
-  return { code: "en", name: langNames["en"] } // 기본값
-}
-
 // 언어 목록에서 선택된 언어를 제외한 목록 반환
 const getFilteredLanguages = (languageList: Array<{code: string, name: string}>, excludeCode: string) => {
   return languageList.filter((lang) => lang.code !== excludeCode);
@@ -121,7 +106,8 @@ const getFilteredLanguages = (languageList: Array<{code: string, name: string}>,
 export function Translator() {
   const [activeTab, setActiveTab] = useState("text")
   const [sourceLanguage, setSourceLanguage] = useState("detect")
-  const [targetLanguage, setTargetLanguage] = useState("en")
+  const { preferredLanguage, isLoading: isLoadingPreferredLanguage } = usePreferredLanguage()
+  const [targetLanguage, setTargetLanguage] = useState<string>(preferredLanguage)
   const [showSourceLanguageDropdown, setShowSourceLanguageDropdown] = useState(false)
   const [showTargetLanguageDropdown, setShowTargetLanguageDropdown] = useState(false)
   const [sourceText, setSourceText] = useState("")
@@ -129,35 +115,86 @@ export function Translator() {
   const [characterCount, setCharacterCount] = useState(0)
   const [isTranslating, setIsTranslating] = useState(false)
   const [isLoadingTranslation, setIsLoadingTranslation] = useState(false)
-  const [sourceTextCopied, setSourceTextCopied] = useState(false)
-  const [translatedTextCopied, setTranslatedTextCopied] = useState(false)
   const [usageStats, setUsageStats] = useState<{
     limit: number
     used: number
     remaining: number
   } | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [detectedLanguageCode, setDetectedLanguageCode] = useState<string | null>(null)
-  const [detectedLanguageName, setDetectedLanguageName] = useState<string | null>(null)
   const [languageMismatch, setLanguageMismatch] = useState<{
     detected: string
     detectedCode: string
     current: string
   } | null>(null)
-  const [isSaving, setIsSaving] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
-  const [isDetecting, setIsDetecting] = useState(false)
-  const [isDragging, setIsDragging] = useState(false)
 
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  // 텍스트 복사 훅 사용
+  const {
+    sourceTextCopied,
+    translatedTextCopied,
+    handleCopyText,
+    handleCopyTranslation
+  } = useTextCopy()
+
+  // 언어 감지 훅 사용
+  const {
+    detectedLanguageCode,
+    detectedLanguageName,
+    isDetecting,
+    error: detectError,
+    detectLanguage,
+  } = useDetectLanguage(sourceText, true, sourceLanguage)
+
+  // 언어 중복 방지 훅 사용
+  const { preventSameLanguage } = useSameLanguagePrevention(
+    sourceLanguage,
+    targetLanguage,
+    detectedLanguageCode,
+    isDetecting,
+    languages,
+    setTargetLanguage
+  )
+
+  // 번역 저장 훅 사용
+  const {
+    isSaving,
+    isSaved,
+    saveTranslation,
+    resetSaveState
+  } = useTranslationSave(userId)
+
+  // 문서 번역 훅 사용
+  const {
+    isDragging,
+    isUploading,
+    uploadStep,
+    currentTranslation,
+    userPlan,
+    translationsLeft,
+    canTranslate,
+    documentError,
+    fileInputRef,
+    handleDragOver,
+    handleDragLeave,
+    handleDrop,
+    handleDocumentUpload,
+    handleDocumentDownload,
+    resetDocumentTranslation
+  } = useDocumentTranslation(userId, sourceLanguage, targetLanguage)
+
+  // 감지된 언어 오류가 있으면 전역 오류에 설정
+  useEffect(() => {
+    if (detectError) {
+      setError(detectError);
+    }
+  }, [detectError])
+
   const sourceTextareaRef = useRef<HTMLTextAreaElement>(null)
   const targetTextareaRef = useRef<HTMLTextAreaElement>(null)
   const currentInputRef = useRef<string>("")
   const abortControllerRef = useRef<AbortController | null>(null)
   const isTranslatingRef = useRef<boolean>(false)
   const translationTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const [isSaved, setIsSaved] = useState(false);
-
 
   const { user } = useAuth()
   const { profile } = useUser()
@@ -165,15 +202,6 @@ export function Translator() {
   const { toast } = useToast()
   const supabase = createClientComponentClient()
   const dispatch = useAppDispatch()
-  const {
-    isUploading,
-    uploadStep,
-    currentTranslation,
-    userPlan,
-    translationsLeft,
-    canTranslate,
-    error: documentError,
-  } = useAppSelector((state) => state.documentTranslation)
 
   // 최대 입력 길이 계산
   const getMaxInputLength = () => {
@@ -200,102 +228,6 @@ export function Translator() {
     }
   }, [])
 
-  // 언어 감지 함수 (클라이언트 측과 서버 API 사용)
-  const detectLanguage = async (text: string) => {
-    setIsDetecting(true)
-    const clientDetected = simpleDetectLanguage(text)
-    setDetectedLanguageCode(clientDetected.code)
-    setDetectedLanguageName(clientDetected.name)
-
-    try {
-      const response = await fetch("/api/detect-language", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }),
-      })
-      if (response.ok) {
-        const data = await response.json()
-        if (data.detectedLanguage && data.detectedLanguage.code) {
-          console.log("감지된 언어 코드:", data.detectedLanguage.code)
-          console.log("감지된 언어 이름:", data.detectedLanguage.name)
-          setDetectedLanguageCode(data.detectedLanguage.code)
-          setDetectedLanguageName(data.detectedLanguage.name)
-        }
-      }
-    } catch (error) {
-      console.error("서버 API 오류, 클라이언트 결과 유지:", error)
-    } finally {
-      setIsDetecting(false)
-    }
-    return clientDetected
-  }
-
-  // 감지된 언어와 타겟 언어가 같은 경우 처리
-  const preventSameLanguage = (
-    sourceCode: string,
-    targetCode: string,
-    detectedCode: string | null = null
-  ) => {
-    if (isDetecting) return false
-    const effectiveSourceCode =
-      sourceCode === "detect" && detectedCode ? detectedCode : sourceCode
-    if (effectiveSourceCode === targetCode) {
-      const alternativeLanguage = languages.find(
-        (lang) => lang.code !== effectiveSourceCode && lang.code !== "detect"
-      )
-      if (alternativeLanguage) {
-        setTargetLanguage(alternativeLanguage.code)
-        return true
-      }
-    }
-    return false
-  }
-
-  // 감지된 언어 코드가 있을 때 타겟 언어가 같은지 체크
-  useEffect(() => {
-    if (detectedLanguageCode && sourceLanguage === "detect") {
-      preventSameLanguage("detect", targetLanguage, detectedLanguageCode)
-    }
-  }, [detectedLanguageCode, sourceLanguage, targetLanguage, isDetecting])
-
-  // 실시간 언어 감지 (디바운스)
-  useEffect(() => {
-    if (sourceLanguage !== "detect" || sourceText.trim().length < 4) return
-    setIsDetecting(true)
-    const debounceTimeout = setTimeout(async () => {
-      if (isTranslatingRef.current) return
-      try {
-        const response = await fetch("/api/detect-language", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: sourceText }),
-        })
-        if (response.ok) {
-          const data = await response.json()
-          if (data.detectedLanguage && data.detectedLanguage.code) {
-            setDetectedLanguageCode(data.detectedLanguage.code)
-            setDetectedLanguageName(data.detectedLanguage.name)
-            console.log(`실시간 언어 감지: ${data.detectedLanguage.name}`)
-            setTimeout(() => setIsDetecting(false), 100)
-          }
-        } else {
-          console.log("API 오류, 클라이언트 측 감지 사용")
-          const detected = simpleDetectLanguage(sourceText)
-          setDetectedLanguageCode(detected.code)
-          setDetectedLanguageName(detected.name)
-          setTimeout(() => setIsDetecting(false), 100)
-        }
-      } catch (error) {
-        console.error("언어 감지 API 오류:", error)
-        const detected = simpleDetectLanguage(sourceText)
-        setDetectedLanguageCode(detected.code)
-        setDetectedLanguageName(detected.name)
-        setTimeout(() => setIsDetecting(false), 100)
-      }
-    }, 800)
-    return () => clearTimeout(debounceTimeout)
-  }, [sourceText, sourceLanguage])
-
   // 자동 번역 (디바운스 처리)
   useEffect(() => {
     const debounceTimeout = setTimeout(() => {
@@ -306,7 +238,7 @@ export function Translator() {
     return () => clearTimeout(debounceTimeout)
   }, [sourceText, sourceLanguage, targetLanguage])
 
-  // 텍스트 입력 처리 (입력 시 로딩 상태는 API 호출 시에만 적용)
+  // 텍스트 입력 처리
   const handleSourceTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const text = e.target.value
     if (text.length > maxInputLength) return
@@ -323,6 +255,9 @@ export function Translator() {
         abortControllerRef.current = null
       }
     }
+    
+    // 새 텍스트가 입력되면 저장 상태 초기화
+    resetSaveState()
   }
 
   // 언어 스왑
@@ -334,6 +269,9 @@ export function Translator() {
     setSourceText(translatedText)
     setTranslatedText(sourceText)
     setCharacterCount(translatedText.length)
+    
+    // 스왑 시 저장 상태 초기화
+    resetSaveState()
   }
 
   const handleClearText = () => {
@@ -344,86 +282,27 @@ export function Translator() {
       abortControllerRef.current.abort()
       abortControllerRef.current = null
     }
+    
+    // 텍스트 클리어 시 저장 상태 초기화
+    resetSaveState()
   }
 
-  // 텍스트 복사 기능
-  const handleCopyText = async (text: string, isSource: boolean = false) => {
-    if (!text) return
-    try {
-      await navigator.clipboard.writeText(text)
-      if (isSource) {
-        setSourceTextCopied(true)
-        setTimeout(() => setSourceTextCopied(false), 2000)
-      } else {
-        setTranslatedTextCopied(true)
-        setTimeout(() => setTranslatedTextCopied(false), 2000)
-      }
-    } catch (err) {
-      console.error("텍스트 복사 실패:", err)
-    }
-  }
-
-  const handleCopyTranslation = () => {
-    handleCopyText(translatedText, false)
-  }
-
-  // 번역 저장
-  const handleSaveTranslation = async () => {
-    if (!translatedText || !userId) {
-      toast({
-        title: "오류",
-        description: !userId
-          ? "로그인이 필요합니다."
-          : "저장할 번역 내용이 없습니다.",
-        variant: "destructive",
-      })
-      return
-    }
-    setIsSaving(true)
-    try {
-      const wordCount = sourceText.trim().split(/\s+/).length
-      const actualSourceLanguage =
-        sourceLanguage === "detect"
-          ? detectedLanguageName || "Unknown"
-          : languages.find((lang) => lang.code === sourceLanguage)?.name ||
-            sourceLanguage
-
-      const { error } = await supabase.from("translation_history").insert({
-        user_id: userId,
-        source_language: actualSourceLanguage,
-        target_language:
-          languages.find((lang) => lang.code === targetLanguage)?.name ||
-          targetLanguage,
-        text: sourceText,
-        translated_text: translatedText,
-        word_count: wordCount,
-        created_at: new Date().toISOString(),
-      })
-
-      if (error) throw error
-
-      setIsSaved(true)
-      toast({
-        description: "번역이 성공적으로 저장되었습니다.",
-      })
-    } catch (error: any) {
-      console.error("번역 저장 오류:", error)
-      toast({
-        title: "저장 오류",
-        description:
-          error.message || "번역 저장 중 오류가 발생했습니다.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsSaving(false)
-    }
+  // 번역 저장 래퍼 함수
+  const handleSaveTranslation = () => {
+    saveTranslation(
+      sourceText,
+      translatedText,
+      sourceLanguage,
+      targetLanguage,
+      detectedLanguageName,
+      languages
+    )
   }
 
   // 타겟 언어 변경
-  
   const handleTargetLanguageChange = (code: string) => {
     setTargetLanguage(code)
-
+    
     // 'detect' 모드인 경우 감지된 언어를 사용, 아니면 선택된 소스 언어 사용
     const effectiveSourceCode = sourceLanguage === "detect" && detectedLanguageCode
       ? detectedLanguageCode
@@ -443,11 +322,9 @@ export function Translator() {
         }, 300)
       }
     }
-  };
+  }
 
-
-
-  // 번역 API 호출 (API 호출 중에만 로딩 애니메이션이 표시됨)
+  // 번역 API 호출
   const translateText = async () => {
     if (!sourceText.trim() || sourceLanguage === targetLanguage) return
     try {
@@ -463,45 +340,15 @@ export function Translator() {
 
       let detectedLanguageInfo = null
       if (sourceLanguage === "detect") {
-        setIsDetecting(true)
-        try {
-          const response = await fetch("/api/detect-language", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ text: sourceText }),
-            signal: abortControllerRef.current.signal,
-          })
-          if (response.ok) {
-            const data = await response.json()
-            if (data.detectedLanguage && data.detectedLanguage.code) {
-              detectedLanguageInfo = data.detectedLanguage
-              setDetectedLanguageCode(data.detectedLanguage.code)
-              setDetectedLanguageName(data.detectedLanguage.name)
-            }
-          } else {
-            const detected = simpleDetectLanguage(sourceText)
-            detectedLanguageInfo = {
-              code: detected.code,
-              name: detected.name,
-              confidence: 0.8,
-            }
-            setDetectedLanguageCode(detected.code)
-            setDetectedLanguageName(detected.name)
+        // 이미 감지된 언어가 있으면 사용, 없으면 감지
+        if (detectedLanguageCode && detectedLanguageName) {
+          detectedLanguageInfo = {
+            code: detectedLanguageCode,
+            name: detectedLanguageName,
+            confidence: 0.9
           }
-        } catch (error) {
-          if (error instanceof Error && error.name !== "AbortError") {
-            console.error("언어 감지 오류:", error)
-            const detected = simpleDetectLanguage(sourceText)
-            detectedLanguageInfo = {
-              code: detected.code,
-              name: detected.name,
-              confidence: 0.8,
-            }
-            setDetectedLanguageCode(detected.code)
-            setDetectedLanguageName(detected.name)
-          } else {
-            throw error
-          }
+        } else {
+          detectedLanguageInfo = await detectLanguage(sourceText)
         }
       }
 
@@ -527,7 +374,7 @@ export function Translator() {
       const data = await response.json()
       const cleanedTranslation = cleanTranslationResult(data.text)
       setTranslatedText(cleanedTranslation)
-      setIsSaved(false)
+      resetSaveState() // 새 번역 결과가 나오면 저장 상태 초기화
       if (data.usageStats) {
         setUsageStats(data.usageStats)
       }
@@ -613,166 +460,21 @@ export function Translator() {
     }
   }, [userId, dispatch])
 
-  // 드래그 앤 드롭 핸들러
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setIsDragging(true)
-  }
-
-  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setIsDragging(false)
-  }
-
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setIsDragging(false)
-    if (!userId || !canTranslate) return
-    const files = e.dataTransfer.files
-    if (files.length > 0) {
-      const file = files[0]
-      const fileExtension = file.name.split(".").pop()?.toLowerCase()
-      if (["pdf", "docx", "txt"].includes(fileExtension || "")) {
-        handleFileUpload(file)
-      } else {
-        console.log("지원하지 않는 파일 형식")
-        toast({
-          title: "지원되지 않는 파일 형식",
-          description: "PDF, DOCX, TXT 형식의 파일만 지원합니다.",
-          variant: "destructive",
-        })
-      }
-    }
-  }
-
-  // 파일 업로드 처리
-  const handleDocumentUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      handleFileUpload(file)
-    }
-  }
-
-  // 간단한 알림 함수
-  const showAlert = (message: string) => {
-    const alertElement = document.createElement("div")
-    alertElement.style.position = "fixed"
-    alertElement.style.bottom = "20px"
-    alertElement.style.right = "20px"
-    alertElement.style.padding = "10px 20px"
-    alertElement.style.backgroundColor = "#333"
-    alertElement.style.color = "white"
-    alertElement.style.borderRadius = "4px"
-    alertElement.style.zIndex = "9999"
-    alertElement.textContent = message
-
-    document.body.appendChild(alertElement)
-
-    setTimeout(() => {
-      alertElement.style.opacity = "0"
-      alertElement.style.transition = "opacity 0.5s"
-      setTimeout(() => {
-        document.body.removeChild(alertElement)
-      }, 500)
-    }, 3000)
-  }
-
-  // 파일 업로드 핸들러 (문서 번역)
-  const handleFileUpload = (file: File) => {
-    if (!userId) return
-    dispatch(
-      uploadAndTranslateDocument({
-        file,
-        userId,
-        sourceLanguage,
-        targetLanguage,
-        userPlan,
-      })
-    )
-      .unwrap()
-      .then(() => {
-        showAlert("문서 번역이 완료되었습니다.")
-      })
-      .catch((error) => {
-        showAlert(`오류: ${error || "문서 번역 중 오류가 발생했습니다."}`)
-      })
-  }
-
-  // 번역 문서 다운로드
-  const handleDocumentDownload = async (fileUrl: string) => {
-    try {
-      const response = await fetch(fileUrl)
-      if (!response.ok) throw new Error("파일을 가져오는 데 실패했습니다")
-      const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.href = url
-      a.download =
-        currentTranslation?.document_name.replace(/\.[^.]+$/, "") +
-        "_translated" +
-        currentTranslation?.document_name.substring(
-          currentTranslation.document_name.lastIndexOf(".")
-        )
-      document.body.appendChild(a)
-      a.click()
-      window.URL.revokeObjectURL(url)
-      a.remove()
-    } catch (error: any) {
-      console.error("Download error:", error)
-      toast({
-        title: "다운로드 오류",
-        description:
-          error.message || "파일 다운로드 중 오류가 발생했습니다.",
-        variant: "destructive",
-      })
-    }
-  }
-
-  // Redux 디버깅
+  // 선호 언어가 로드되면 타겟 언어 업데이트
   useEffect(() => {
-    console.log("Redux 문서 번역 상태:", {
-      userId,
-      userPlan,
-      canTranslate,
-      translationsLeft,
-    })
-  }, [userId, userPlan, canTranslate, translationsLeft])
-
-  useEffect(() => {
-    if (user?.id) {
-      setUserId(user.id)
-      console.log("사용자 ID 설정됨:", user.id)
-      dispatch(fetchUserPlanAndLimits(user.id))
+    if (preferredLanguage && !isLoadingPreferredLanguage) {
+      console.log("선호 언어 업데이트:", preferredLanguage);
+      setTargetLanguage(preferredLanguage);
     }
-  }, [user, dispatch])
+  }, [preferredLanguage, isLoadingPreferredLanguage]);
 
+  // 디버깅용: 타겟 언어 변경 감지
   useEffect(() => {
-    if (userId) {
-      console.log("문서 번역 상태 확인:", {
-        userId,
-        userPlan,
-        canTranslate,
-        translationsLeft,
-      })
-    }
-  }, [userId, userPlan, canTranslate, translationsLeft])
+    console.log("현재 타겟 언어:", targetLanguage);
+    console.log("타겟 언어 이름:", languages.find(l => l.code === targetLanguage)?.name || "찾을 수 없음");
+  }, [targetLanguage]);
 
-  useEffect(() => {
-    console.log("Toast 함수 확인:", toast)
-    try {
-      toast({
-        title: "테스트 알림",
-        description: "이 메시지가 보이면 toast가 작동합니다.",
-      })
-      console.log("Toast 호출 성공")
-    } catch (error) {
-      console.error("Toast 호출 실패:", error)
-    }
-  }, [toast])
-
+  // UI 렌더링 (변경 없음)
   return (
     <div className="w-full max-w-6xl mx-auto bg-white rounded-xl shadow-sm border">
       <Tabs defaultValue="text" value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -791,6 +493,7 @@ export function Translator() {
           </TabsTrigger>
         </TabsList>
 
+        {/* Text Translation Tab */}
         <TabsContent value="text" className="mt-0">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
             {/* Source Text 영역 */}
@@ -1046,6 +749,7 @@ export function Translator() {
           )}
         </TabsContent>
 
+        {/* Image Tab */}
         <TabsContent value="image" className="mt-0">
           <div className="text-center py-12 border-2 border-dashed rounded-lg">
             <Image className="h-12 w-12 mx-auto text-gray-400 mb-4" />
@@ -1064,6 +768,7 @@ export function Translator() {
           </div>
         </TabsContent>
 
+        {/* Document Tab */}
         <TabsContent value="document" className="mt-0">
           <LanguageSelector
             sourceLanguage={sourceLanguage}
@@ -1106,7 +811,7 @@ export function Translator() {
                   </div>
                 </div>
                 <div className="flex justify-between items-center">
-                  <Button onClick={() => dispatch(resetTranslation())} variant="outline" size="sm">
+                  <Button onClick={resetDocumentTranslation} variant="outline" size="sm">
                     <RefreshCw className="h-4 w-4 mr-2" />
                     새 문서 번역
                   </Button>
