@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { useLoadingDots } from "../../hooks/useLoadingDots";
+import { useLoadingDots } from "./useLoadingDots";
 
 interface LoadingDotsProps {
   className?: string;
