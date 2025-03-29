@@ -540,9 +540,9 @@ export function Translator() {
 
 
   return (
-    <div className="w-full max-w-7xl mx-auto bg-white rounded-xl shadow-sm border">
+    <div className="w-full max-w-7xl mx-auto bg-white dark:bg-[#1a1a1a] rounded-xl shadow-sm border dark:border-gray-800">
       <Tabs defaultValue="text" value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid grid-cols-3 mb-2">
+        <TabsList className="grid grid-cols-3 mb-2 dark:bg-gray-800">
           <TabsTrigger value="text" className="flex items-center gap-2">
             <Languages className="h-4 w-4" />
             <span>텍스트</span>
@@ -562,11 +562,11 @@ export function Translator() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
             {/* Source Text 영역 */}
             <div className="border-r relative">
-              <div className="p-3 border-b flex justify-between items-center h-14 relative">
+              <div className="p-3 border-b dark:border-gray-800 flex justify-between items-center h-14 relative">
                 <div className="relative">
                   <button
                     type="button"
-                    className="dropdown-trigger flex items-center gap-1 text-sm font-medium"
+                    className="dropdown-trigger flex items-center gap-1 text-sm font-medium dark:text-[#d794b7]"
                     onClick={(e) => {
                       e.stopPropagation()
                       setShowSourceLanguageDropdown(!showSourceLanguageDropdown)
@@ -576,8 +576,8 @@ export function Translator() {
                     {sourceLanguage === "detect" ? (
                       <>
                         {detectedLanguageName ? (
-                          <span className="flex items-center">
-                            감지됨: <span className="font-medium text-green-600 ml-1">{detectedLanguageName}</span>
+                          <span className="flex items-center dark:text-[#d794b7]">
+                            감지됨: <span className="font-medium text-green-600 ml-1 dark:text-[#82d2ce]">{detectedLanguageName}</span>
                           </span>
                         ) : (
                           "언어 감지"
@@ -599,7 +599,7 @@ export function Translator() {
 
               {showSourceLanguageDropdown && (
                 <div
-                  className="dropdown-content absolute top-[56px] left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50"
+                  className="dropdown-content absolute top-[56px] left-0 right-0 bg-white dark:bg-[#1a1a1a] border-t border-gray-200 dark:border-gray-800 shadow-lg z-50"
                   style={{ maxHeight: "400px", overflowY: "auto" }}
                   onClick={(e) => e.stopPropagation()}
                 >
@@ -608,8 +608,8 @@ export function Translator() {
                       type="button"
                       className={`text-left p-3 text-sm rounded-md ${
                         sourceLanguage === "detect"
-                          ? "bg-green-50 border border-green-200 text-green-700"
-                          : "border border-gray-200 hover:bg-gray-50"
+                          ? "bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300"
+                          : "border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 dark:text-[#ebc88d]"
                       }`}
                       onClick={(e) => {
                         e.stopPropagation()
@@ -618,7 +618,7 @@ export function Translator() {
                       }}
                     >
                       <span className="flex items-center">
-                        {sourceLanguage === "detect" && <span className="text-green-500 mr-2">✓</span>}
+                        {sourceLanguage === "detect" && <span className="text-green-500 mr-2 dark:text-[#d794b7]">✓</span>}
                         언어 감지
                       </span>
                     </button>
@@ -628,8 +628,8 @@ export function Translator() {
                         type="button"
                         className={`text-left p-3 text-sm rounded-md ${
                           sourceLanguage === lang.code
-                            ? "bg-green-50 border border-green-200 text-green-700"
-                            : "border border-gray-200 hover:bg-gray-50"
+                            ? "bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300"
+                            : "border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 dark:text-[#d794b7]"
                         }`}
                         onClick={(e) => {
                           e.stopPropagation()
@@ -660,21 +660,21 @@ export function Translator() {
                 <textarea
                   ref={sourceTextareaRef}
                   placeholder="번역할 텍스트를 입력하세요"
-                  className="w-full pr-10 p-4 pb-16 min-h-[300px] resize-none border-0 focus:ring-0 focus:outline-none"
+                  className="w-full pr-10 p-4 pb-16 min-h-[300px] resize-none border-0 focus:ring-0 focus:outline-none bg-white dark:bg-[#1a1a1a] dark:text-[#ebc88d] dark:placeholder-[#ebc88d]/50"
                   value={sourceText}
                   onChange={handleSourceTextChange}
                   maxLength={maxInputLength}
                 />
                 <div className="absolute bottom-3 left-3 right-3 flex justify-between items-center">
-                  <div className="text-xs text-gray-500">
+                  <div className="text-xs text-gray-500 dark:text-[#ebc88d]/70">
                     {characterCount} / {maxInputLength}
                   </div>
                   {sourceText && (
                     <div className="flex gap-2">
-                      <button className="text-gray-500 hover:text-gray-700">
+                      <button className="text-gray-500 dark:text-[#d6d6dd] hover:text-gray-700 dark:hover:text-[#d6d6dd]/80">
                         <Volume2 className="h-5 w-5" />
                       </button>
-                      <button className="text-gray-500 hover:text-gray-700" onClick={() => handleCopyText(sourceText, true)}>
+                      <button className="text-gray-500 dark:text-[#d6d6dd] hover:text-gray-700 dark:hover:text-[#d6d6dd]/80" onClick={() => handleCopyText(sourceText, true)}>
                         {sourceTextCopied ? (
                           <CheckCircle2 className="h-5 w-5 text-green-500" />
                         ) : (
@@ -689,11 +689,11 @@ export function Translator() {
 
             {/* Translated Text 영역 */}
             <div className="relative">
-              <div className="p-3 border-b flex justify-between items-center h-14 relative">
+              <div className="p-3 border-b dark:border-gray-800 flex justify-between items-center h-14 relative">
                 <div className="relative">
                   <button
                     type="button"
-                    className="dropdown-trigger flex items-center gap-1 text-sm font-medium"
+                    className="dropdown-trigger flex items-center gap-1 text-sm font-medium dark:text-[#d794b7]"
                     onClick={(e) => {
                       e.stopPropagation()
                       setShowTargetLanguageDropdown(!showTargetLanguageDropdown)
@@ -708,7 +708,7 @@ export function Translator() {
 
               {showTargetLanguageDropdown && (
                 <div
-                  className="dropdown-content absolute top-[56px] left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50"
+                  className="dropdown-content absolute top-[56px] left-0 right-0 bg-white dark:bg-[#1a1a1a] border-t border-gray-200 dark:border-gray-800 shadow-lg z-50"
                   style={{ maxHeight: "400px", overflowY: "auto" }}
                   onClick={(e) => e.stopPropagation()}
                 >
@@ -719,8 +719,8 @@ export function Translator() {
                         type="button"
                         className={`text-left p-3 text-sm rounded-md ${
                           targetLanguage === lang.code
-                            ? "bg-green-50 border border-green-200 text-green-700"
-                            : "border border-gray-200 hover:bg-gray-50"
+                            ? "bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300"
+                            : "border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 dark:text-[#d794b7]"
                         }`}
                         onClick={(e) => {
                           e.stopPropagation()
@@ -748,16 +748,16 @@ export function Translator() {
                     ref={targetTextareaRef}
                     readOnly
                     placeholder={isTranslating ? "번역 중..." : "번역 결과가 여기에 표시됩니다"}
-                    className="w-full p-4 pb-16 min-h-[300px] resize-none border-0 focus:ring-0 focus:outline-none bg-white"
+                    className="w-full p-4 pb-16 min-h-[300px] resize-none border-0 focus:ring-0 focus:outline-none bg-white dark:bg-[#1a1a1a] dark:text-[#ebc88d] dark:placeholder-[#ebc88d]/50"
                     value={translatedText}
                   />
                 )}
                 {translatedText && (
                   <div className="absolute bottom-3 right-3 flex gap-3">
-                    <button className="text-gray-500 hover:text-gray-700">
+                    <button className="text-gray-500 dark:text-[#d6d6dd] hover:text-gray-700 dark:hover:text-[#d6d6dd]/80">
                       <Volume2 className="h-5 w-5" />
                     </button>
-                    <button className="text-gray-500 hover:text-gray-700" onClick={() => handleCopyText(translatedText, false)}>
+                    <button className="text-gray-500 dark:text-[#d6d6dd] hover:text-gray-700 dark:hover:text-[#d6d6dd]/80" onClick={() => handleCopyText(translatedText, false)}>
                       {translatedTextCopied ? (
                         <CheckCircle2 className="h-5 w-5 text-green-500" />
                       ) : (
@@ -765,14 +765,14 @@ export function Translator() {
                       )}
                     </button>
                     <button
-                      className="text-gray-500 hover:text-gray-700"
+                      className="text-gray-500 dark:text-[#d6d6dd] hover:text-gray-700 dark:hover:text-[#d6d6dd]/80"
                       onClick={handleSaveTranslation}
                       disabled={isSaving || isSaved || !userId}
                       title={!userId ? "로그인이 필요합니다" : "번역 기록 저장"}
                     >
                       <Star className={`h-5 w-5 ${isSaved ? "fill-yellow-400 text-yellow-400" : ""}`} />
                     </button>
-                    <button className="text-gray-500 hover:text-gray-700">
+                    <button className="text-gray-500 dark:text-[#d6d6dd] hover:text-gray-700 dark:hover:text-[#d6d6dd]/80">
                       <Share2 className="h-5 w-5" />
                     </button>
                   </div>
@@ -782,24 +782,24 @@ export function Translator() {
           </div>
 
           {error && (
-            <div className="bg-red-50 text-red-500 p-3 m-3 rounded-md text-sm">
+            <div className="bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-300 p-3 m-3 rounded-md text-sm">
               {error}
             </div>
           )}
 
           {usageStats && (
-            <div className="text-xs text-gray-500 p-3 border-t">
+            <div className="text-xs text-gray-500 dark:text-[#ebc88d]/70 p-3 border-t dark:border-gray-800">
               일일 번역 사용량: {usageStats.used}/{usageStats.limit} (남은 횟수: {usageStats.remaining})
             </div>
           )}
 
           {languageMismatch && (
-            <div className="bg-yellow-50 text-yellow-800 p-3 my-2 rounded-md text-sm flex justify-between items-center">
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-300 p-3 my-2 rounded-md text-sm flex justify-between items-center">
               <div>
                 입력된 텍스트는 {languageMismatch.current}가 아닌 {languageMismatch.detected}로 감지되었습니다.
               </div>
               <button
-                className="text-sm bg-yellow-100 hover:bg-yellow-200 text-yellow-800 px-2 py-1 rounded"
+                className="text-sm bg-yellow-100 dark:bg-yellow-900/30 hover:bg-yellow-200 dark:hover:bg-yellow-900/50 text-yellow-800 dark:text-yellow-300 px-2 py-1 rounded"
                 onClick={() => {
                   setSourceLanguage(languageMismatch.detectedCode)
                   setLanguageMismatch(null)
