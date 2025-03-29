@@ -179,19 +179,27 @@ export const uploadAndTranslateDocument = createAsyncThunk(
       }
       
       // 파일 유형에 따른 처리
-      let extractedContent;
-      if (fileType.toLowerCase() === 'txt') {
+      let extractedContent: any = {};
+      const fileTypeStr = fileType?.toLowerCase() || '';
+      
+      if (fileTypeStr === 'txt') {
         // TXT 파일 처리
         const { text } = await extractResponse.json();
         console.log("텍스트는: ", text);
         console.log("파일 사이즈는: ", fileSizeInMB);
         extractedContent = { text };
-      } else if (fileType.toLowerCase() === 'docx') {
+      } else if (fileTypeStr === 'docx') {
         // DOCX 파일 처리
-        const { html, text } = await extractResponse.json();
-        console.log("DOCX 처리: HTML 및 텍스트 추출 완료");
-        extractedContent = { html, text };
-      } else if (fileType.toLowerCase() === 'pdf') {
+        const responseData = await extractResponse.json();
+        console.log("DOCX 응답 데이터:", Object.keys(responseData));
+        
+        // 텍스트와 docxData 모두 추출
+        const { text, docxData } = responseData;
+        console.log("DOCX 처리: 텍스트 및 구조 데이터 추출 완료");
+        console.log("텍스트 노드 수:", docxData?.textNodes?.length || 0);
+        
+        extractedContent = { text, docxData };
+      } else if (fileTypeStr === 'pdf') {
         // PDF 파일 처리 (추후 구현)
         const { text } = await extractResponse.json();
         extractedContent = { text };
@@ -202,24 +210,24 @@ export const uploadAndTranslateDocument = createAsyncThunk(
       dispatch(setUploadStep('translating'));
       
       // 번역 요청 데이터 구성
-      const translationRequestBody = {
+      const translationRequestBody: any = {
         inputText: extractedContent.text,
         inputLanguage: sourceLanguage || 'auto',
         outputLanguage: targetLanguage,
-        fileType: fileType,
+        fileType: fileTypeStr,
         fileUrl: urlData.signedUrl
       };
       
-      // DOCX의 경우 HTML도 함께 전송
-      if (fileType.toLowerCase() === 'docx' && extractedContent.html) {
-        translationRequestBody.html = extractedContent.html;
+      // DOCX의 경우 docxData도 함께 전송
+      if (fileTypeStr === 'docx' && extractedContent.docxData) {
+        translationRequestBody.docxData = extractedContent.docxData;
       }
       
       console.log("번역 API 요청 데이터:", {
         inputText: extractedContent.text?.substring(0, 100) + "...",
         inputLanguage: sourceLanguage || 'auto',
         outputLanguage: targetLanguage,
-        fileType: fileType
+        fileType: fileTypeStr
       });
       
       const translateResponse = await fetch('/api/translate', {
@@ -233,22 +241,36 @@ export const uploadAndTranslateDocument = createAsyncThunk(
         throw new Error(errorData.error || '번역에 실패했습니다.');
       }
       
-      const { translatedText } = await translateResponse.json();
+      const translateResponseData = await translateResponse.json();
+      const { translatedText, translatedDocxData } = translateResponseData;
+      
+      console.log("번역 API 응답:", { 
+        hasTranslatedText: !!translatedText, 
+        hasTranslatedDocxData: !!translatedDocxData,
+        textLength: translatedText?.length || 0
+      });
       
       // 6. 문서 생성
       dispatch(setUploadStep('generating'));
       
+      const generateRequestBody: any = {
+        translatedText,
+        originalFileName: file.name,
+        fileType: fileTypeStr,
+        userId,
+        sourceLanguage: sourceLanguage || 'auto',
+        targetLanguage
+      };
+      
+      // DOCX 파일인 경우 번역된 DOCX 데이터도 포함
+      if (fileTypeStr === 'docx' && translatedDocxData) {
+        generateRequestBody.translatedDocxData = translatedDocxData;
+      }
+      
       const generateResponse = await fetch('/api/generate-document', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          translatedText,
-          originalFileName: file.name,
-          fileType,
-          userId,
-          sourceLanguage: sourceLanguage || 'auto',
-          targetLanguage
-        })
+        body: JSON.stringify(generateRequestBody)
       });
     
       if (!generateResponse.ok) {
