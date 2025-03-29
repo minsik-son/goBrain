@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { useAuth } from "@/lib/contexts/auth-context"
 import { useUser } from "@/lib/contexts/user-context"
 import { cn } from "@/lib/utils"
@@ -100,7 +100,11 @@ const langNames: { [key: string]: string } = {
 
 // 언어 목록에서 선택된 언어를 제외한 목록 반환
 const getFilteredLanguages = (languageList: Array<{code: string, name: string}>, excludeCode: string) => {
-  return languageList.filter((lang) => lang.code !== excludeCode);
+  // excludeCode가 'detect'인 경우는 필터링하지 않음 (모든 언어 표시)
+  if (excludeCode === 'detect') {
+    return languageList.filter((lang) => lang.code !== 'detect');
+  }
+  return languageList.filter((lang) => lang.code !== excludeCode && lang.code !== 'detect');
 };
 
 export function Translator() {
@@ -145,6 +149,9 @@ export function Translator() {
     detectLanguage,
   } = useDetectLanguage(sourceText, true, sourceLanguage)
 
+  // 내부 로직에서 사용할 실제 소스 언어 코드 결정
+  const effectiveSourceLanguageCode = sourceLanguage === 'detect' && detectedLanguageCode ? detectedLanguageCode : sourceLanguage;
+
   // 언어 중복 방지 훅 사용
   const { preventSameLanguage } = useSameLanguagePrevention(
     sourceLanguage,
@@ -180,7 +187,7 @@ export function Translator() {
     handleDocumentUpload,
     handleDocumentDownload,
     resetDocumentTranslation
-  } = useDocumentTranslation(userId, sourceLanguage, targetLanguage)
+  } = useDocumentTranslation(userId, effectiveSourceLanguageCode, targetLanguage)
 
   // 감지된 언어 오류가 있으면 전역 오류에 설정
   useEffect(() => {
@@ -262,16 +269,42 @@ export function Translator() {
 
   // 언어 스왑
   const handleSwapLanguages = () => {
-    if (sourceLanguage === "detect") return
-    const temp = sourceLanguage
-    setSourceLanguage(targetLanguage)
-    setTargetLanguage(temp)
-    setSourceText(translatedText)
-    setTranslatedText(sourceText)
-    setCharacterCount(translatedText.length)
+    // 현재 유효한 소스 언어 코드를 가져옴
+    const currentEffectiveSource = effectiveSourceLanguageCode;
     
-    // 스왑 시 저장 상태 초기화
-    resetSaveState()
+    // 'detect' 상태이고 아직 감지되지 않았다면 스왑 불가
+    if (currentEffectiveSource === 'detect') {
+        toast({
+          title: "Cannot swap",
+          description: "Please enter text for language detection or select a specific source language.",
+          variant: "destructive"
+        })
+        return;
+    }
+
+    const currentTarget = targetLanguage;
+    
+    // 새 소스 언어는 현재 타겟 언어가 됨
+    setSourceLanguage(currentTarget); 
+    
+    // 새 타겟 언어는 현재 유효한 소스 언어가 됨
+    setTargetLanguage(currentEffectiveSource); 
+    
+    // 텍스트 스왑 로직 수정
+    if (sourceText && translatedText) {
+      // 둘 다 값이 있으면, output을 input으로 옮기고 input은 비움
+      setSourceText(translatedText);
+      setTranslatedText("");
+      setCharacterCount(translatedText.length);
+    } else {
+      // 기존 로직: 값 스왑
+      const tempText = sourceText;
+      setSourceText(translatedText);
+      setTranslatedText(tempText);
+      setCharacterCount(translatedText.length);
+    }
+    
+    resetSaveState();
   }
 
   const handleClearText = () => {
@@ -309,11 +342,11 @@ export function Translator() {
       : sourceLanguage
 
     // Prevent the target language from being the same as the source language.
-    if (!preventSameLanguage(effectiveSourceCode, code)) {
+    if (effectiveSourceCode !== code) {
       // If the languages are different, start translating.
       if (sourceText.trim()) {
         setIsLoadingTranslation(true)
-        //setTranslatedText("")
+        //setTranslatedText("") // 번역 중임을 명확히 하기 위해 이전 결과 지우기 (선택 사항)
         if (translationTimeoutRef.current) {
           clearTimeout(translationTimeoutRef.current)
         }
@@ -321,6 +354,11 @@ export function Translator() {
           translateText()
         }, 300)
       }
+    } else {
+      // 만약 언어가 같다면 에러 처리 또는 UI 피드백 제공
+      console.warn("Target language cannot be the same as the source language.");
+      // 필요하다면 toast 메시지 표시
+      // toast({ title: "Same Language", description: "Source and target languages cannot be the same.", variant: "warning" });
     }
   }
 
@@ -411,26 +449,52 @@ export function Translator() {
     }
   }, [showSourceLanguageDropdown, showTargetLanguageDropdown])
 
-  // textarea 높이 자동 조정 및 동기화
-  useEffect(() => {
-    const adjustTextareaHeight = () => {
-      if (sourceTextareaRef.current && targetTextareaRef.current) {
-        sourceTextareaRef.current.style.height = "auto"
-        targetTextareaRef.current.style.height = "auto"
-        const sourceScrollHeight = sourceTextareaRef.current.scrollHeight
-        const targetScrollHeight = targetTextareaRef.current.scrollHeight
-        const minHeight = 300
-        const sourceHeight = Math.max(sourceScrollHeight, minHeight)
-        const targetHeight = Math.max(targetScrollHeight, minHeight)
-        const maxHeight = Math.max(sourceHeight, targetHeight)
-        sourceTextareaRef.current.style.height = `${maxHeight}px`
-        targetTextareaRef.current.style.height = `${maxHeight}px`
-      }
+  // textarea 높이 자동 조정 함수 (useCallback으로 감싸기)
+  const adjustTextareaHeight = useCallback(() => {
+    if (sourceTextareaRef.current && targetTextareaRef.current) {
+      // 높이 초기화
+      sourceTextareaRef.current.style.height = "auto"
+      targetTextareaRef.current.style.height = "auto"
+      
+      // 실제 스크롤 높이 계산
+      const sourceScrollHeight = sourceTextareaRef.current.scrollHeight
+      const targetScrollHeight = targetTextareaRef.current.scrollHeight
+      const minHeight = 300 // 최소 높이 설정
+      
+      // 각 textarea의 필요한 높이 계산 (최소 높이 고려)
+      const sourceHeight = Math.max(sourceScrollHeight, minHeight)
+      const targetHeight = Math.max(targetScrollHeight, minHeight)
+      
+      // 두 textarea 중 더 큰 높이로 동기화
+      const maxHeight = Math.max(sourceHeight, targetHeight)
+      
+      sourceTextareaRef.current.style.height = `${maxHeight}px`
+      targetTextareaRef.current.style.height = `${maxHeight}px`
     }
-    adjustTextareaHeight()
-    window.addEventListener("resize", adjustTextareaHeight)
-    return () => window.removeEventListener("resize", adjustTextareaHeight)
-  }, [sourceText, translatedText])
+  }, []); // 의존성 배열 비움 (ref는 변경되지 않음)
+
+  // textarea 높이 자동 조정 및 동기화 (텍스트 변경 시)
+  useEffect(() => {
+    adjustTextareaHeight();
+  }, [sourceText, translatedText, adjustTextareaHeight]); // adjustTextareaHeight 추가
+
+  // 창 크기 변경 시 높이 재조정
+  useEffect(() => {
+    window.addEventListener("resize", adjustTextareaHeight);
+    return () => window.removeEventListener("resize", adjustTextareaHeight);
+  }, [adjustTextareaHeight]); // adjustTextareaHeight 추가
+
+  // 탭 변경 시 높이 재조정
+  useEffect(() => {
+    if (activeTab === 'text') {
+      // 텍스트 탭이 활성화될 때 약간의 지연 후 높이 재조정
+      // (탭 전환 애니메이션 등으로 인해 즉시 계산이 정확하지 않을 수 있음)
+      const timeoutId = setTimeout(() => {
+        adjustTextareaHeight();
+      }, 0); // 비동기적으로 실행하여 렌더링 후 높이 계산
+      return () => clearTimeout(timeoutId);
+    }
+  }, [activeTab, adjustTextareaHeight]); // activeTab, adjustTextareaHeight 추가
 
   // 디버깅: 언어 감지 상태 확인
   useEffect(() => {
@@ -474,9 +538,9 @@ export function Translator() {
     console.log("타겟 언어 이름:", languages.find(l => l.code === targetLanguage)?.name || "찾을 수 없음");
   }, [targetLanguage]);
 
-  // UI 렌더링 (변경 없음)
+
   return (
-    <div className="w-full max-w-6xl mx-auto bg-white rounded-xl shadow-sm border">
+    <div className="w-full max-w-7xl mx-auto bg-white rounded-xl shadow-sm border">
       <Tabs defaultValue="text" value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid grid-cols-3 mb-2">
           <TabsTrigger value="text" className="flex items-center gap-2">
@@ -649,7 +713,7 @@ export function Translator() {
                   onClick={(e) => e.stopPropagation()}
                 >
                   <div className="grid grid-cols-3 p-4 gap-2">
-                    {getFilteredLanguages(languages.filter(lang => lang.code !== "detect"), sourceLanguage).map((lang) => (
+                    {getFilteredLanguages(languages.filter(lang => lang.code !== "detect"), effectiveSourceLanguageCode).map((lang) => (
                       <button
                         key={lang.code}
                         type="button"
@@ -662,7 +726,6 @@ export function Translator() {
                           e.stopPropagation()
                           handleTargetLanguageChange(lang.code)
                           setShowTargetLanguageDropdown(false)
-                          if (sourceText) translateText()
                         }}
                       >
                         <span className="flex items-center">
