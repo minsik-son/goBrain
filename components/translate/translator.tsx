@@ -617,8 +617,8 @@ export function Translator() {
                         setShowSourceLanguageDropdown(false)
                       }}
                     >
-                      <span className="flex items-center">
-                        {sourceLanguage === "detect" && <span className="text-green-500 mr-2 dark:text-[#d794b7]">✓</span>}
+                      <span className="flex items-center dark:text-[#d794b7]">
+                        {sourceLanguage === "detect" && <span className="text-green-500 mr-2 ">✓</span>}
                         언어 감지
                       </span>
                     </button>
