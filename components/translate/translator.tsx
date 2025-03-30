@@ -566,7 +566,7 @@ export function Translator() {
                 <div className="relative">
                   <button
                     type="button"
-                    className="dropdown-trigger flex items-center gap-1 text-sm font-medium dark:text-[#d794b7]"
+                    className="dropdown-trigger flex items-center gap-1 text-sm font-medium dark:text-[#e575f5]"
                     onClick={(e) => {
                       e.stopPropagation()
                       setShowSourceLanguageDropdown(!showSourceLanguageDropdown)
@@ -576,8 +576,8 @@ export function Translator() {
                     {sourceLanguage === "detect" ? (
                       <>
                         {detectedLanguageName ? (
-                          <span className="flex items-center dark:text-[#d794b7]">
-                            감지됨: <span className="font-medium text-green-600 ml-1 dark:text-[#82d2ce]">{detectedLanguageName}</span>
+                          <span className="flex items-center dark:text-[#e575f5]">
+                            감지됨: <span className="font-medium text-green-600 ml-1 dark:text-[#9ddbe6]">{detectedLanguageName}</span>
                           </span>
                         ) : (
                           "언어 감지"
@@ -617,7 +617,7 @@ export function Translator() {
                         setShowSourceLanguageDropdown(false)
                       }}
                     >
-                      <span className="flex items-center dark:text-[#d794b7]">
+                      <span className="flex items-center dark:text-[#e575f5]">
                         {sourceLanguage === "detect" && <span className="text-green-500 mr-2 ">✓</span>}
                         언어 감지
                       </span>
@@ -629,7 +629,7 @@ export function Translator() {
                         className={`text-left p-3 text-sm rounded-md ${
                           sourceLanguage === lang.code
                             ? "bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300"
-                            : "border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 dark:text-[#d794b7]"
+                            : "border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 dark:text-[#e575f5]"
                         }`}
                         onClick={(e) => {
                           e.stopPropagation()
@@ -693,7 +693,7 @@ export function Translator() {
                 <div className="relative">
                   <button
                     type="button"
-                    className="dropdown-trigger flex items-center gap-1 text-sm font-medium dark:text-[#d794b7]"
+                    className="dropdown-trigger flex items-center gap-1 text-sm font-medium dark:text-[#e575f5]"
                     onClick={(e) => {
                       e.stopPropagation()
                       setShowTargetLanguageDropdown(!showTargetLanguageDropdown)
@@ -720,7 +720,7 @@ export function Translator() {
                         className={`text-left p-3 text-sm rounded-md ${
                           targetLanguage === lang.code
                             ? "bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300"
-                            : "border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 dark:text-[#d794b7]"
+                            : "border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 dark:text-[#e575f5]"
                         }`}
                         onClick={(e) => {
                           e.stopPropagation()
@@ -840,6 +840,7 @@ export function Translator() {
             onTargetLanguageChange={handleTargetLanguageChange}
             onReloadClick={() => console.log("Reload clicked")}
             activeTab="document"
+            enableDetection={false}
           />
           {isUploading ? (
             <div className="text-center py-16 border-2 rounded-lg">

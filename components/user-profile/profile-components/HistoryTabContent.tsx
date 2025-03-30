@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/use-toast"
-import { Clipboard, Eye, ChevronUp, Trash2 } from "lucide-react"
+import { Clipboard, Eye, ChevronUp, Trash2, CheckCircle2 } from "lucide-react"
 import { format } from "date-fns"
 import {
   AlertDialog,
@@ -24,16 +24,45 @@ export function HistoryTabContent() {
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({})
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deletingItemId, setDeletingItemId] = useState<string | null>(null)
+  const [copiedStates, setCopiedStates] = useState<Record<string, boolean>>({})
+  const [copiedOriginal, setCopiedOriginal] = useState<Record<string, boolean>>({})
+  const [copiedTranslated, setCopiedTranslated] = useState<Record<string, boolean>>({})
   
   const dispatch = useAppDispatch()
   const { items, isLoading, totalPages, currentPage } = useAppSelector((state) => state.translationHistory)
   const { toast } = useToast()
   
-  const handleCopy = (text: string) => {
+  const handleCopy = (text: string, id: string) => {
     navigator.clipboard.writeText(text)
+    setCopiedStates(prev => ({ ...prev, [id]: true }))
     toast({
       description: "텍스트가 클립보드에 복사되었습니다.",
     })
+    setTimeout(() => {
+      setCopiedStates(prev => ({ ...prev, [id]: false }))
+    }, 2000)
+  }
+  
+  const handleCopyOriginal = (text: string, id: string) => {
+    navigator.clipboard.writeText(text)
+    setCopiedOriginal(prev => ({ ...prev, [id]: true }))
+    toast({
+      description: "원본 텍스트가 클립보드에 복사되었습니다.",
+    })
+    setTimeout(() => {
+      setCopiedOriginal(prev => ({ ...prev, [id]: false }))
+    }, 2000)
+  }
+  
+  const handleCopyTranslated = (text: string, id: string) => {
+    navigator.clipboard.writeText(text)
+    setCopiedTranslated(prev => ({ ...prev, [id]: true }))
+    toast({
+      description: "번역된 텍스트가 클립보드에 복사되었습니다.",
+    })
+    setTimeout(() => {
+      setCopiedTranslated(prev => ({ ...prev, [id]: false }))
+    }, 2000)
   }
   
   const handleExpandRow = (id: string) => {
@@ -141,9 +170,14 @@ export function HistoryTabContent() {
                               variant="ghost" 
                               size="sm"
                               title="복사"
-                              onClick={() => handleCopy(item.translated_text)}
+                              onClick={() => handleCopy(item.translated_text, item.id)}
+                              className="transition-all duration-200"
                             >
-                              <Clipboard className="h-4 w-4" />
+                              {copiedStates[item.id] ? (
+                                <CheckCircle2 className="h-4 w-4 text-green-500" />
+                              ) : (
+                                <Clipboard className="h-4 w-4" />
+                              )}
                             </Button>
                             <Button 
                               variant="ghost" 
@@ -171,13 +205,33 @@ export function HistoryTabContent() {
                             <div className="space-y-4">
                               <div>
                                 <h4 className="text-sm font-medium mb-1">원본 텍스트 ({item.source_language})</h4>
-                                <div className="p-3 bg-white border rounded-md text-sm whitespace-pre-wrap">
+                                <div className="p-3 bg-white border rounded-md text-sm whitespace-pre-wrap dark:bg-[#1a1a1a]">
                                   {item.text}
                                 </div>
                               </div>
+                              <div className="flex justify-end">
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  onClick={() => handleCopyOriginal(item.text, item.id)}
+                                  className="transition-all duration-200"
+                                >
+                                  {copiedOriginal[item.id] ? (
+                                    <>
+                                      <CheckCircle2 className="h-4 w-4 text-green-500 mr-2" />
+                                      복사됨
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Clipboard className="h-4 w-4 mr-2" />
+                                      원본 텍스트 복사
+                                    </>
+                                  )}
+                                </Button>
+                              </div>
                               <div>
                                 <h4 className="text-sm font-medium mb-1">번역된 텍스트 ({item.target_language})</h4>
-                                <div className="p-3 bg-white border rounded-md text-sm whitespace-pre-wrap">
+                                <div className="p-3 bg-white border rounded-md text-sm whitespace-pre-wrap dark:bg-[#1a1a1a]">
                                   {item.translated_text}
                                 </div>
                               </div>
@@ -185,9 +239,20 @@ export function HistoryTabContent() {
                                 <Button 
                                   size="sm" 
                                   variant="outline" 
-                                  onClick={() => handleCopy(`${item.text}\n\n${item.translated_text}`)}
+                                  onClick={() => handleCopyTranslated(item.translated_text, item.id)}
+                                  className="transition-all duration-200"
                                 >
-                                  모두 복사
+                                  {copiedTranslated[item.id] ? (
+                                    <>
+                                      <CheckCircle2 className="h-4 w-4 text-green-500 mr-2" />
+                                      복사됨
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Clipboard className="h-4 w-4 mr-2" />
+                                      번역된 텍스트 복사
+                                    </>
+                                  )}
                                 </Button>
                               </div>
                             </div>

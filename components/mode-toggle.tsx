@@ -3,10 +3,12 @@
 
 /**
  * HEXCODE
+ * 밝은 자주색 : #e575f5
  * 자주색 : #d794b7 (dark)
  * 노란색 : #ebc88d (light) 
- * 푸른색 : #82d2ce (light)
+ * 청록색 : #82d2ce (light)
  * 배경색 : #1a1a1a (dark)
+ * 푸른색 : #9ddbe6
  */
 import { useEffect, useState } from 'react'
 import { Sun, Moon } from 'lucide-react'

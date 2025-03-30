@@ -31,6 +31,7 @@ interface LanguageSelectorProps {
   onTargetLanguageChange: (language: string) => void
   onReloadClick?: () => void
   activeTab: string
+  enableDetection?: boolean
 }
 
 export function LanguageSelector({
@@ -40,9 +41,16 @@ export function LanguageSelector({
   onTargetLanguageChange,
   onReloadClick,
   activeTab,
+  enableDetection = true,
 }: LanguageSelectorProps) {
   const [showSourceLanguageDropdown, setShowSourceLanguageDropdown] = useState(false)
   const [showTargetLanguageDropdown, setShowTargetLanguageDropdown] = useState(false)
+
+  useEffect(() => {
+    if (!enableDetection && sourceLanguage === 'detect') {
+      onSourceLanguageChange('en')
+    }
+  }, [enableDetection, sourceLanguage, onSourceLanguageChange])
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -64,7 +72,11 @@ export function LanguageSelector({
   }
 
   const getFilteredLanguages = (excludeCode: string) => {
-    return languages.filter((lang) => lang.code !== excludeCode)
+    let filteredLanguages = languages.filter((lang) => lang.code !== excludeCode)
+    if (!enableDetection) {
+      filteredLanguages = filteredLanguages.filter((lang) => lang.code !== 'detect')
+    }
+    return filteredLanguages
   }
 
   return (
@@ -73,7 +85,7 @@ export function LanguageSelector({
         <div className="relative">
           <button
             type="button"
-            className="dropdown-trigger flex items-center gap-1 text-sm font-medium p-3 w-full h-14 text-left"
+            className="dropdown-trigger flex items-center gap-1 text-sm font-medium p-3 w-full h-14 text-left dark:text-[#e575f5]"
             onClick={(e) => {
               e.stopPropagation()
               setShowSourceLanguageDropdown(!showSourceLanguageDropdown)
@@ -89,48 +101,50 @@ export function LanguageSelector({
           {activeTab === "text" ? (
             <button
               type="button"
-              className="h-8 w-8 absolute right-3 top-3 text-gray-500 hover:text-gray-700"
+              className="h-8 w-8 absolute right-3 top-3 text-gray-500 hover:text-gray-700 dark:text-[#d6d6dd] dark:hover:text-[#d6d6dd]/80"
               onClick={handleSwapLanguages}
               title="Swap Languages"
             >
               <RotateCcw className="h-4 w-4" />
             </button>
           ) : (
-            <ArrowRight className="h-8 w-10 absolute right-3 top-3 text-gray-400" />
+            <ArrowRight className="h-8 w-10 absolute right-3 top-3 text-gray-400 dark:text-[#d6d6dd]" />
           )}
 
           {showSourceLanguageDropdown && (
             <div
-              className="dropdown-content absolute top-[56px] left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50"
+              className="dropdown-content absolute top-[56px] left-0 right-0 bg-white dark:bg-[#1a1a1a] border-t border-gray-200 dark:border-gray-800 shadow-lg z-50"
               style={{ maxHeight: "400px", overflowY: "auto" }}
               onClick={(e) => e.stopPropagation()}
             >
               <div className="grid grid-cols-3 p-4 gap-2">
-                <button
-                  type="button"
-                  className={`text-left p-3 text-sm rounded-md ${
-                    sourceLanguage === "detect"
-                      ? "bg-green-50 border border-green-200 text-green-700"
-                      : "border border-gray-200 hover:bg-gray-50"
-                  }`}
-                  onClick={() => {
-                    onSourceLanguageChange("detect")
-                    setShowSourceLanguageDropdown(false)
-                  }}
-                >
-                  <span className="flex items-center">
-                    {sourceLanguage === "detect" && <span className="text-green-500 mr-2">✓</span>}
-                    Detect Language
-                  </span>
-                </button>
+                {enableDetection && (
+                  <button
+                    type="button"
+                    className={`text-left p-3 text-sm rounded-md ${
+                      sourceLanguage === "detect"
+                        ? "bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300"
+                        : "border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 dark:text-[#e575f5]"
+                    }`}
+                    onClick={() => {
+                      onSourceLanguageChange("detect")
+                      setShowSourceLanguageDropdown(false)
+                    }}
+                  >
+                    <span className="flex items-center dark:text-[#e575f5]">
+                      {sourceLanguage === "detect" && <span className="text-green-500 mr-2">✓</span>}
+                      Detect Language
+                    </span>
+                  </button>
+                )}
                 {getFilteredLanguages(targetLanguage).map((lang) => (
                   <button
                     key={lang.code}
                     type="button"
                     className={`text-left p-3 text-sm rounded-md ${
                       sourceLanguage === lang.code
-                        ? "bg-green-50 border border-green-200 text-green-700"
-                        : "border border-gray-200 hover:bg-gray-50"
+                        ? "bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300"
+                        : "border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 dark:text-[#e575f5]"
                     }`}
                     onClick={() => {
                       onSourceLanguageChange(lang.code)
@@ -153,7 +167,7 @@ export function LanguageSelector({
         <div className="relative">
           <button
             type="button"
-            className="dropdown-trigger flex items-center gap-1 text-sm font-medium p-3 w-full h-14 text-left"
+            className="dropdown-trigger flex items-center gap-1 text-sm font-medium p-3 w-full h-14 text-left dark:text-[#e575f5]"
             onClick={(e) => {
               e.stopPropagation()
               setShowTargetLanguageDropdown(!showTargetLanguageDropdown)
@@ -166,7 +180,7 @@ export function LanguageSelector({
 
           {showTargetLanguageDropdown && (
             <div
-              className="dropdown-content absolute top-[56px] left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50"
+              className="dropdown-content absolute top-[56px] left-0 right-0 bg-white dark:bg-[#1a1a1a] border-t border-gray-200 dark:border-gray-800 shadow-lg z-50"
               style={{ maxHeight: "400px", overflowY: "auto" }}
               onClick={(e) => e.stopPropagation()}
             >
@@ -177,8 +191,8 @@ export function LanguageSelector({
                     type="button"
                     className={`text-left p-3 text-sm rounded-md ${
                       targetLanguage === lang.code
-                        ? "bg-green-50 border border-green-200 text-green-700"
-                        : "border border-gray-200 hover:bg-gray-50"
+                        ? "bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300"
+                        : "border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 dark:text-[#e575f5]"
                     }`}
                     onClick={() => {
                       onTargetLanguageChange(lang.code)

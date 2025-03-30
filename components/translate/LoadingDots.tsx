@@ -27,7 +27,7 @@ export function LoadingDots({
             className={cn(
               dotSize,
               dotColor,
-              "rounded-full transition-all duration-300",
+              "rounded-full transition-all duration-300 dark:bg-[#ead19f]",
               size === 1 ? "scale-150 opacity-100" : "scale-100 opacity-60"
             )}
           />

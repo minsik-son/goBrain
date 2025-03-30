@@ -34,7 +34,7 @@ export const fetchTranslationHistory = createAsyncThunk(
   async (page: number = 1, { rejectWithValue }) => {
     try {
       const supabase = createClientComponentClient()
-      const itemsPerPage = 5
+      const itemsPerPage = 15
       
       // 사용자 확인
       const { data: userData } = await supabase.auth.getUser()
