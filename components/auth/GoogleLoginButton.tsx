@@ -24,7 +24,7 @@ const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({ setIsLoading, onS
       const { error: signInError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: `${window.location.origin}/api/auth/callback`,
           queryParams: {
             access_type: 'offline',
             prompt: 'select_account',
