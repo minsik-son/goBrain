@@ -7,14 +7,6 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 export const maxDuration = 60; // 처리 시간이 길어질 수 있으므로 60초로 설정
 
-export const config = {
-  api: {
-    bodyParser: {
-      sizeLimit: '20mb',
-    },
-  },
-};
-
 export async function POST(request: NextRequest) {
   try {
     console.log('extract-text API 호출됨');
