@@ -14,13 +14,8 @@ import { useEffect, useState } from 'react'
 import { Sun, Moon } from 'lucide-react'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { useAuth } from '@/lib/contexts/auth-context'
-import { cn } from '@/lib/utils'
 
-interface ModeToggleProps {
-  className?: string;
-}
-
-export function ModeToggle({ className }: ModeToggleProps = {}) {
+export function ModeToggle() {
   const [isDark, setIsDark] = useState(false)
   const supabase = createClientComponentClient()
   const { user } = useAuth()
@@ -92,10 +87,7 @@ export function ModeToggle({ className }: ModeToggleProps = {}) {
   return (
     <button
       onClick={toggleTheme}
-      className={cn(
-        "p-2 rounded-md transition-colors bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-700",
-        className
-      )}
+      className="p-2 rounded-md transition-colors bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-700"
       aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
     >
       {isDark ? (

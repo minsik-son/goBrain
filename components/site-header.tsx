@@ -36,6 +36,7 @@ import LoginButton from "@/components/auth/LoginButton"
 import { Menu, Home, BookOpen, CreditCard, Settings, LogOut, X } from 'lucide-react'
 import { Switch } from "@/components/ui/switch"
 import { useTheme } from "next-themes"
+import { useAuth } from "@/lib/contexts/auth-context"
 
 export function SiteHeader() {
   const [dropdownOpen, setDropdownOpen] = useState(false)
@@ -45,43 +46,45 @@ export function SiteHeader() {
   const supabase = createClientComponentClient()
   const { theme, setTheme } = useTheme()
   
-  // Redux에서 유저 상태 가져오기
-  const { id, userName, avatarUrl, isLoading } = useAppSelector((state) => state.user)
+  const { user, signOut: contextSignOut, isLoading: authLoading } = useAuth();
+  const { userName, avatarUrl } = useAppSelector((state) => state.user)
   const dispatch = useAppDispatch()
   
-  // 컴포넌트 마운트 시 한 번만 사용자 데이터 로드
   useEffect(() => {
-    if (!id && !isLoading) {
+    if (user && !userName && !authLoading) {
       dispatch(fetchUserData())
     }
-  }, [id, isLoading, dispatch])
+  }, [user, userName, authLoading, dispatch])
   
   const handleSignOut = async () => {
-    await supabase.auth.signOut()
-    router.push('/')
-    // 로그아웃 후 페이지 새로고침
-    window.location.reload()
+    await contextSignOut(); 
+    router.push('/');
   }
   
-  // 아바타 폴백을 위한 이니셜 생성
+  const handleNavigation = (path: string, requiresAuth: boolean = false) => {
+    if (requiresAuth && !user) { 
+      setMobileMenuOpen(false);
+      const loginButton = document.querySelector('[data-login-button]') as HTMLButtonElement;
+      if (loginButton) {
+        loginButton.click();
+      }
+      return;
+    }
+    router.push(path);
+    setMobileMenuOpen(false);
+  };
+  
   const getInitials = (name: string | null) => {
     if (!name) return 'U'
-    return name
-      .split(' ')
-      .map(part => part[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2)
+    return name.split(' ').map(part => part[0]).join('').toUpperCase().slice(0, 2)
   }
   
-  // 모바일 메뉴 토글
   const toggleMobileMenu = () => {
     setMobileMenuOpen(!mobileMenuOpen)
   }
   
-  // 다크모드 토글
-  const toggleDarkMode = () => {
-    setTheme(theme === 'dark' ? 'light' : 'dark')
+  const toggleDarkMode = (checked: boolean) => {
+    setTheme(checked ? 'dark' : 'light');
   }
   
   return (
@@ -197,14 +200,14 @@ export function SiteHeader() {
           
           {/* 데스크탑 로그인 상태에 따라 다른 UI 표시 */}
           <div className="hidden md:block">
-            {id ? (
+            {user ? (
               <div className="relative">
                 <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                       <Avatar className="h-8 w-8">
-                        <AvatarImage src={avatarUrl || ""} alt={userName || "User"} />
-                        <AvatarFallback>{getInitials(userName)}</AvatarFallback>
+                        <AvatarImage src={avatarUrl || user.user_metadata?.avatar_url || ""} alt={userName || user.user_metadata?.full_name || "User"} />
+                        <AvatarFallback>{getInitials(userName || user.user_metadata?.full_name)}</AvatarFallback>
                       </Avatar>
                     </Button>
                   </DropdownMenuTrigger>
@@ -212,10 +215,10 @@ export function SiteHeader() {
                     <DropdownMenuLabel className="font-normal">
                       <div className="flex flex-col space-y-1">
                         <p className="text-sm font-medium leading-none">
-                          {userName || "User"}
+                          {userName || user.user_metadata?.full_name || "User"}
                         </p>
                         <p className="text-xs leading-none text-muted-foreground">
-                          {/* 사용자 이메일 또는 다른 정보 */}
+                          {user.email}
                         </p>
                       </div>
                     </DropdownMenuLabel>
@@ -234,7 +237,7 @@ export function SiteHeader() {
                 </DropdownMenu>
               </div>
             ) : (
-              <LoginButton />
+              <LoginButton data-login-button />
             )}
           </div>
         </div>
@@ -262,48 +265,60 @@ export function SiteHeader() {
         
         {/* 사용자 프로필 영역 */}
         <div className="p-4 border-b border-gray-200 dark:border-gray-800">
-          {id ? (
+          {user ? (
             <Link href="/profile" className="flex items-center space-x-3 p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800" onClick={toggleMobileMenu}>
               <Avatar className="h-12 w-12">
-                <AvatarImage src={avatarUrl || ""} alt={userName || "User"} />
-                <AvatarFallback>{getInitials(userName)}</AvatarFallback>
+                <AvatarImage src={avatarUrl || user.user_metadata?.avatar_url || ""} alt={userName || user.user_metadata?.full_name || "User"} />
+                <AvatarFallback>{getInitials(userName || user.user_metadata?.full_name)}</AvatarFallback>
               </Avatar>
               <div>
-                <p className="font-medium">{userName || "User"}</p>
+                <p className="font-medium">{userName || user.user_metadata?.full_name || "User"}</p>
                 <p className="text-sm text-muted-foreground">로그인 되어 있습니다</p>
               </div>
             </Link>
           ) : (
             <div className="p-2">
               <p className="text-sm mb-2">로그인 해주세요</p>
-              <LoginButton />
+              <LoginButton data-login-button />
             </div>
           )}
         </div>
         
         {/* 모바일 메뉴 항목 */}
         <div className="py-2">
-          <Link href="/" className="flex items-center space-x-3 p-4 text-sm hover:bg-gray-100 dark:hover:bg-gray-800" onClick={toggleMobileMenu}>
+          <button
+            className="flex w-full items-center space-x-3 p-4 text-sm hover:bg-gray-100 dark:hover:bg-gray-800"
+            onClick={() => handleNavigation("/")}
+          >
             <Home className="h-5 w-5" />
             <span>GoBrain 홈</span>
-          </Link>
-          <Link href="/" className="flex items-center space-x-3 p-4 text-sm hover:bg-gray-100 dark:hover:bg-gray-800" onClick={toggleMobileMenu}>
+          </button>
+          <button
+            className="flex w-full items-center space-x-3 p-4 text-sm hover:bg-gray-100 dark:hover:bg-gray-800"
+            onClick={() => handleNavigation("/profile", true)}
+          >
             <BookOpen className="h-5 w-5" />
             <span>번역 기록</span>
-          </Link>
-          <Link href="/pricing" className="flex items-center space-x-3 p-4 text-sm hover:bg-gray-100 dark:hover:bg-gray-800" onClick={toggleMobileMenu}>
+          </button>
+          <button
+            className="flex w-full items-center space-x-3 p-4 text-sm hover:bg-gray-100 dark:hover:bg-gray-800"
+            onClick={() => handleNavigation("/pricing")}
+          >
             <CreditCard className="h-5 w-5" />
             <span>Pricing</span>
-          </Link>
+          </button>
         </div>
         
         {/* 설정 및 로그아웃 */}
-        {id && (
+        {user && (
           <div className="border-t border-gray-200 dark:border-gray-800 py-2">
-            <Link href="/settings" className="flex items-center space-x-3 p-4 text-sm hover:bg-gray-100 dark:hover:bg-gray-800" onClick={toggleMobileMenu}>
+            <button
+              className="flex w-full items-center space-x-3 p-4 text-sm hover:bg-gray-100 dark:hover:bg-gray-800"
+              onClick={() => handleNavigation("/settings")}
+            >
               <Settings className="h-5 w-5" />
               <span>설정</span>
-            </Link>
+            </button>
             <button 
               onClick={() => {
                 handleSignOut();
@@ -322,6 +337,7 @@ export function SiteHeader() {
           <div className="flex items-center justify-between">
             <span className="text-sm">다크모드</span>
             <Switch 
+              id="mobile-dark-mode-toggle"
               checked={theme === 'dark'} 
               onCheckedChange={toggleDarkMode} 
             />
