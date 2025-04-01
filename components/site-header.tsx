@@ -33,12 +33,17 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks"
 import { fetchUserData } from "@/lib/redux/slices/userSlice"
 import LoginButton from "@/components/auth/LoginButton"
+import { Menu, Home, BookOpen, CreditCard, Settings, LogOut, X } from 'lucide-react'
+import { Switch } from "@/components/ui/switch"
+import { useTheme } from "next-themes"
 
 export function SiteHeader() {
   const [dropdownOpen, setDropdownOpen] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClientComponentClient()
+  const { theme, setTheme } = useTheme()
   
   // Redux에서 유저 상태 가져오기
   const { id, userName, avatarUrl, isLoading } = useAppSelector((state) => state.user)
@@ -69,6 +74,16 @@ export function SiteHeader() {
       .slice(0, 2)
   }
   
+  // 모바일 메뉴 토글
+  const toggleMobileMenu = () => {
+    setMobileMenuOpen(!mobileMenuOpen)
+  }
+  
+  // 다크모드 토글
+  const toggleDarkMode = () => {
+    setTheme(theme === 'dark' ? 'light' : 'dark')
+  }
+  
   return (
     <header className="w-full border-b bg-background z-10 sticky top-0">
       <div className="container flex h-14 items-center">
@@ -83,7 +98,7 @@ export function SiteHeader() {
                   <NavigationMenuLink
                     className={cn(
                       navigationMenuTriggerStyle(),
-                      pathname === "/translator" && "text-primary font-medium"
+                      pathname === "/" && "text-primary font-medium"
                     )}
                   >
                     Translator
@@ -173,48 +188,144 @@ export function SiteHeader() {
           </NavigationMenu>
         </div>
         <div className="flex flex-1 items-center justify-end space-x-2">
-          <ModeToggle />
+          <ModeToggle className="hidden md:flex" />
           
-          {/* 로그인 상태에 따라 다른 UI 표시 */}
+          {/* 모바일 메뉴 토글 버튼 */}
+          <Button variant="ghost" className="md:hidden p-2" onClick={toggleMobileMenu}>
+            <Menu className="h-5 w-5" />
+          </Button>
+          
+          {/* 데스크탑 로그인 상태에 따라 다른 UI 표시 */}
+          <div className="hidden md:block">
+            {id ? (
+              <div className="relative">
+                <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={avatarUrl || ""} alt={userName || "User"} />
+                        <AvatarFallback>{getInitials(userName)}</AvatarFallback>
+                      </Avatar>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-56" align="end" forceMount>
+                    <DropdownMenuLabel className="font-normal">
+                      <div className="flex flex-col space-y-1">
+                        <p className="text-sm font-medium leading-none">
+                          {userName || "User"}
+                        </p>
+                        <p className="text-xs leading-none text-muted-foreground">
+                          {/* 사용자 이메일 또는 다른 정보 */}
+                        </p>
+                      </div>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link href="/profile">Dashboard</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/settings">Settings</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleSignOut}>
+                      Log out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            ) : (
+              <LoginButton />
+            )}
+          </div>
+        </div>
+      </div>
+      
+      {/* 모바일 메뉴 - 슬라이드 오버레이 */}
+      <div className={`fixed inset-0 bg-black/50 z-40 transition-opacity md:hidden ${mobileMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} 
+           onClick={toggleMobileMenu}>
+      </div>
+      
+      {/* 모바일 메뉴 - 슬라이드 패널 */}
+      <div className={`
+        fixed top-0 right-0 bottom-0 z-50 
+        w-72 bg-background dark:bg-[#1a1a1a]
+        overflow-y-auto transition-transform duration-300 ease-in-out
+        md:hidden
+        ${mobileMenuOpen ? 'translate-x-0' : 'translate-x-full'}
+      `}>
+        {/* 모바일 메뉴 헤더 */}
+        <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-800">
+          <button onClick={toggleMobileMenu} className="text-gray-500 dark:text-gray-400 p-2">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        
+        {/* 사용자 프로필 영역 */}
+        <div className="p-4 border-b border-gray-200 dark:border-gray-800">
           {id ? (
-            <div className="relative">
-              <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={avatarUrl || ""} alt={userName || "User"} />
-                      <AvatarFallback>{getInitials(userName)}</AvatarFallback>
-                    </Avatar>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56" align="end" forceMount>
-                  <DropdownMenuLabel className="font-normal">
-                    <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">
-                        {userName || "User"}
-                      </p>
-                      <p className="text-xs leading-none text-muted-foreground">
-                        {/* 사용자 이메일 또는 다른 정보 */}
-                      </p>
-                    </div>
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link href="/profile">Dashboard</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/settings">Settings</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleSignOut}>
-                    Log out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+            <Link href="/profile" className="flex items-center space-x-3 p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800" onClick={toggleMobileMenu}>
+              <Avatar className="h-12 w-12">
+                <AvatarImage src={avatarUrl || ""} alt={userName || "User"} />
+                <AvatarFallback>{getInitials(userName)}</AvatarFallback>
+              </Avatar>
+              <div>
+                <p className="font-medium">{userName || "User"}</p>
+                <p className="text-sm text-muted-foreground">로그인 되어 있습니다</p>
+              </div>
+            </Link>
           ) : (
-            <LoginButton />
+            <div className="p-2">
+              <p className="text-sm mb-2">로그인 해주세요</p>
+              <LoginButton />
+            </div>
           )}
+        </div>
+        
+        {/* 모바일 메뉴 항목 */}
+        <div className="py-2">
+          <Link href="/" className="flex items-center space-x-3 p-4 text-sm hover:bg-gray-100 dark:hover:bg-gray-800" onClick={toggleMobileMenu}>
+            <Home className="h-5 w-5" />
+            <span>GoBrain 홈</span>
+          </Link>
+          <Link href="/" className="flex items-center space-x-3 p-4 text-sm hover:bg-gray-100 dark:hover:bg-gray-800" onClick={toggleMobileMenu}>
+            <BookOpen className="h-5 w-5" />
+            <span>번역 기록</span>
+          </Link>
+          <Link href="/pricing" className="flex items-center space-x-3 p-4 text-sm hover:bg-gray-100 dark:hover:bg-gray-800" onClick={toggleMobileMenu}>
+            <CreditCard className="h-5 w-5" />
+            <span>Pricing</span>
+          </Link>
+        </div>
+        
+        {/* 설정 및 로그아웃 */}
+        {id && (
+          <div className="border-t border-gray-200 dark:border-gray-800 py-2">
+            <Link href="/settings" className="flex items-center space-x-3 p-4 text-sm hover:bg-gray-100 dark:hover:bg-gray-800" onClick={toggleMobileMenu}>
+              <Settings className="h-5 w-5" />
+              <span>설정</span>
+            </Link>
+            <button 
+              onClick={() => {
+                handleSignOut();
+                toggleMobileMenu();
+              }} 
+              className="flex w-full items-center space-x-3 p-4 text-sm hover:bg-gray-100 dark:hover:bg-gray-800"
+            >
+              <LogOut className="h-5 w-5" />
+              <span>로그아웃</span>
+            </button>
+          </div>
+        )}
+        
+        {/* 다크모드 토글 */}
+        <div className="border-t border-gray-200 dark:border-gray-800 mt-auto p-4">
+          <div className="flex items-center justify-between">
+            <span className="text-sm">다크모드</span>
+            <Switch 
+              checked={theme === 'dark'} 
+              onCheckedChange={toggleDarkMode} 
+            />
+          </div>
         </div>
       </div>
     </header>

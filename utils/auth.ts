@@ -7,9 +7,11 @@ export async function signInWithGoogle() {
     : 'https://go-brain.vercel.app/auth/callback';
   
   console.log('Auth util: Using redirect URL:', redirectUrl);
+  // 배포후 코드
   
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
+   // options: { redirectTo: `${window.location.origin}/auth/callback` }
     options: { 
       redirectTo: redirectUrl,
       queryParams: {
