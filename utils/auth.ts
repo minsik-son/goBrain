@@ -1,9 +1,22 @@
 import { supabase } from "@/lib/supabaseClient"
 
 export async function signInWithGoogle() {
+  // 환경에 따라 리다이렉트 URL 설정
+  const redirectUrl = process.env.NODE_ENV === 'development'
+    ? `${window.location.origin}/auth/callback`
+    : 'https://go-brain.vercel.app/auth/callback';
+  
+  console.log('Auth util: Using redirect URL:', redirectUrl);
+  
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
-    options: { redirectTo: `${window.location.origin}/auth/callback` }
+    options: { 
+      redirectTo: redirectUrl,
+      queryParams: {
+        access_type: 'offline',
+        prompt: 'select_account',
+      }
+    }
   })
   
   if (error) throw error

@@ -21,10 +21,19 @@ const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({ setIsLoading, onS
       setIsLoading(true);
       setError(null);
       
+      // 환경에 따라 리다이렉트 URL 설정
+      const redirectUrl = process.env.NODE_ENV === 'development'
+        ? `${window.location.origin}/auth/callback`
+        : 'https://go-brain.vercel.app/auth/callback';
+      
+      console.log('Using redirect URL:', redirectUrl);
+      
       const { error: signInError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/api/auth/callback`,
+          //redirectTo: `${window.location.origin}/api/auth/callback`,
+
+          redirectTo: redirectUrl,
           queryParams: {
             access_type: 'offline',
             prompt: 'select_account',
