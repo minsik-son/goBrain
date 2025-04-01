@@ -23,8 +23,8 @@ const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({ setIsLoading, onS
       
       // 환경에 따라 리다이렉트 URL 설정
       const redirectUrl = process.env.NODE_ENV === 'development'
-        ? `${window.location.origin}/auth/callback`
-        : 'https://go-brain.vercel.app/auth/callback';
+        ? `${window.location.origin}/api/auth/callback`
+        : 'https://go-brain.vercel.app/api/auth/callback';
       
       console.log('Using redirect URL:', redirectUrl);
       

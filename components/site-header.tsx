@@ -191,7 +191,7 @@ export function SiteHeader() {
           </NavigationMenu>
         </div>
         <div className="flex flex-1 items-center justify-end space-x-2">
-          <ModeToggle className="hidden md:flex" />
+          <ModeToggle/>
           
           {/* 모바일 메뉴 토글 버튼 */}
           <Button variant="ghost" className="md:hidden p-2" onClick={toggleMobileMenu}>
