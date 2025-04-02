@@ -2,11 +2,11 @@
 
 import type { Metadata } from 'next'
 import './globals.css'
-import { supabase } from '@/lib/supabaseClient'
-import { useEffect, useState } from 'react'
 import { AuthProvider } from "@/lib/contexts/auth-context";
 import { UserProvider } from "@/lib/contexts/user-context";
-import { Providers } from './providers'
+import { Providers as ReduxProvider } from './providers'
+import { ThemeProvider } from "next-themes";
+import { ReactNode } from 'react';
 
 /*
 export const metadata: Metadata = {
@@ -18,38 +18,26 @@ export const metadata: Metadata = {
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode
+  children: ReactNode
 }>) {
 
-  //Google Login Layout Code
-  const [user, setUser] = useState<any>(null)
-
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data, error }) => {
-      if (data?.user) setUser(data.user);
-    });
-
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session) setUser(session.user);
-      else setUser(null);
-    });
-
-    return () => {
-      authListener?.subscription.unsubscribe();
-    };
-  }, []);
-
-
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body>
-        <Providers>
-          <AuthProvider>
-            <UserProvider>
-              {children}
-            </UserProvider>
-          </AuthProvider>
-        </Providers>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <ReduxProvider>
+            <AuthProvider>
+              <UserProvider>
+                {children}
+              </UserProvider>
+            </AuthProvider>
+          </ReduxProvider>
+        </ThemeProvider>
       </body>
     </html>
   )
