@@ -12,6 +12,7 @@ import { useAppDispatch, useAppSelector } from "@/lib/redux/hooks"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { fetchTranslationHistory } from "@/lib/redux/slices/translationHistorySlice"
+import { useMediaQuery } from "@chakra-ui/react"
 
 // 컴포넌트 임포트
 import { SiteHeader } from "@/components/site-header"
@@ -33,6 +34,19 @@ export function UserProfilePage() {
     // 컴포넌트 마운트 시 유저 데이터 로드
     dispatch(fetchUserData())
   }, [dispatch])
+
+  function Closure(){
+    let num = 0;
+    return function(){
+      num++;
+      console.log(num);
+    }
+  }
+
+  const closure = Closure();
+  closure();
+  closure();
+  
   
   useEffect(() => {
     // 히스토리 탭이 선택되었을 때 번역 기록 로드

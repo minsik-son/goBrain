@@ -42,6 +42,7 @@ export async function POST(request: NextRequest) {
         text = pdfData.text;
         break;
       */
+
       case 'docx':
         // JSZip을 사용하여 XML 구조와 텍스트 추출
         const docxData = await extractDocxStructure(buffer);

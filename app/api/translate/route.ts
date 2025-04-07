@@ -233,7 +233,7 @@ async function handleDocxDocumentTranslation(body: any) {
     fileUrl
   });
 }
-
+//PDF를 ODCX로 변환 다음 DOCX를 번력후 다시 PDF로 변환후 출력
 // PDF 문서 번역 처리 함수 (추후 구현)
 async function handlePdfDocumentTranslation(body: any) {
   const { text, sourceLanguage, targetLanguage, fileType, fileUrl } = body;
