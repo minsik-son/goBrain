@@ -25,7 +25,7 @@ export function NotificationPreferencesCard({
   const [productUpdates, setProductUpdates] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   
-  // userData에서 초기값 설정
+  // Set initial values from userData
   useEffect(() => {
     setEmailNotifications(userData.email_notifications)
     setMarketingEmails(userData.marketing_emails)
@@ -35,8 +35,8 @@ export function NotificationPreferencesCard({
   const handleSavePreferences = async () => {
     if (!userData.id) {
       toast({
-        title: "오류",
-        description: "사용자 정보를 찾을 수 없습니다.",
+        title: "Error",
+        description: "User information not found.",
         variant: "destructive"
       })
       return
@@ -45,7 +45,7 @@ export function NotificationPreferencesCard({
     setIsSaving(true)
     
     try {
-      // Redux를 통한 사용자 데이터 업데이트
+      // Update user data through Redux
       await dispatch(updateUserProfile({
         email_notifications: emailNotifications,
         marketing_emails: marketingEmails,
@@ -53,13 +53,13 @@ export function NotificationPreferencesCard({
       })).unwrap()
       
       toast({
-        title: "성공",
-        description: "알림 설정이 성공적으로 업데이트되었습니다.",
+        title: "Success",
+        description: "Notification settings have been successfully updated.",
       })
     } catch (error: any) {
       toast({
-        title: "오류",
-        description: error || "설정 저장 중 오류가 발생했습니다.",
+        title: "Error",
+        description: error || "An error occurred while saving settings.",
         variant: "destructive"
       })
     } finally {
@@ -119,7 +119,7 @@ export function NotificationPreferencesCard({
           onClick={handleSavePreferences}
           disabled={isSaving || userData.isLoading}
         >
-          {isSaving ? "저장 중..." : "Save Preferences"}
+          {isSaving ? "Saving..." : "Save Preferences"}
         </Button>
       </CardFooter>
     </Card>

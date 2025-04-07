@@ -36,7 +36,7 @@ export function HistoryTabContent() {
     navigator.clipboard.writeText(text)
     setCopiedStates(prev => ({ ...prev, [id]: true }))
     toast({
-      description: "텍스트가 클립보드에 복사되었습니다.",
+      description: "Text copied to clipboard.",
     })
     setTimeout(() => {
       setCopiedStates(prev => ({ ...prev, [id]: false }))
@@ -47,7 +47,7 @@ export function HistoryTabContent() {
     navigator.clipboard.writeText(text)
     setCopiedOriginal(prev => ({ ...prev, [id]: true }))
     toast({
-      description: "원본 텍스트가 클립보드에 복사되었습니다.",
+      description: "Original text copied to clipboard.",
     })
     setTimeout(() => {
       setCopiedOriginal(prev => ({ ...prev, [id]: false }))
@@ -58,7 +58,7 @@ export function HistoryTabContent() {
     navigator.clipboard.writeText(text)
     setCopiedTranslated(prev => ({ ...prev, [id]: true }))
     toast({
-      description: "번역된 텍스트가 클립보드에 복사되었습니다.",
+      description: "Translated text copied to clipboard.",
     })
     setTimeout(() => {
       setCopiedTranslated(prev => ({ ...prev, [id]: false }))
@@ -84,12 +84,12 @@ export function HistoryTabContent() {
       await dispatch(deleteTranslationHistoryItem(deletingItemId)).unwrap()
       
       toast({
-        description: "번역 기록이 성공적으로 삭제되었습니다.",
+        description: "Translation history successfully deleted.",
       })
     } catch (error: any) {
       toast({
-        title: "삭제 오류",
-        description: error || "항목을 삭제하는 중 오류가 발생했습니다.",
+        title: "Delete Error",
+        description: error || "An error occurred while deleting the item.",
         variant: "destructive",
       })
     } finally {
@@ -131,10 +131,10 @@ export function HistoryTabContent() {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="text-center py-8">로딩 중...</div>
+            <div className="text-center py-8">Loading...</div>
           ) : items.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              저장된 번역 기록이 없습니다.
+              No translation history available.
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -169,7 +169,7 @@ export function HistoryTabContent() {
                             <Button 
                               variant="ghost" 
                               size="sm"
-                              title="복사"
+                              title="Copy"
                               onClick={() => handleCopy(item.translated_text, item.id)}
                               className="transition-all duration-200"
                             >
@@ -182,7 +182,7 @@ export function HistoryTabContent() {
                             <Button 
                               variant="ghost" 
                               size="sm"
-                              title={expandedRows[item.id] ? "접기" : "펼치기"}
+                              title={expandedRows[item.id] ? "Collapse" : "Expand"}
                               onClick={() => handleExpandRow(item.id)}
                             >
                               {expandedRows[item.id] ? <ChevronUp className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -190,7 +190,7 @@ export function HistoryTabContent() {
                             <Button 
                               variant="ghost" 
                               size="sm"
-                              title="삭제"
+                              title="Delete"
                               onClick={() => handleDeleteClick(item.id)}
                               className="text-red-500 hover:text-red-700 hover:bg-red-50"
                             >
@@ -204,7 +204,7 @@ export function HistoryTabContent() {
                           <TableCell colSpan={7} className="p-4">
                             <div className="space-y-4">
                               <div>
-                                <h4 className="text-sm font-medium mb-1">원본 텍스트 ({item.source_language})</h4>
+                                <h4 className="text-sm font-medium mb-1">Original Text ({item.source_language})</h4>
                                 <div className="p-3 bg-white border rounded-md text-sm whitespace-pre-wrap dark:bg-[#1a1a1a]">
                                   {item.text}
                                 </div>
@@ -219,18 +219,18 @@ export function HistoryTabContent() {
                                   {copiedOriginal[item.id] ? (
                                     <>
                                       <CheckCircle2 className="h-4 w-4 text-green-500 mr-2" />
-                                      복사됨
+                                      Copied
                                     </>
                                   ) : (
                                     <>
                                       <Clipboard className="h-4 w-4 mr-2" />
-                                      원본 텍스트 복사
+                                      Copy Original Text
                                     </>
                                   )}
                                 </Button>
                               </div>
                               <div>
-                                <h4 className="text-sm font-medium mb-1">번역된 텍스트 ({item.target_language})</h4>
+                                <h4 className="text-sm font-medium mb-1">Translated Text ({item.target_language})</h4>
                                 <div className="p-3 bg-white border rounded-md text-sm whitespace-pre-wrap dark:bg-[#1a1a1a]">
                                   {item.translated_text}
                                 </div>
@@ -245,12 +245,12 @@ export function HistoryTabContent() {
                                   {copiedTranslated[item.id] ? (
                                     <>
                                       <CheckCircle2 className="h-4 w-4 text-green-500 mr-2" />
-                                      복사됨
+                                      Copied
                                     </>
                                   ) : (
                                     <>
                                       <Clipboard className="h-4 w-4 mr-2" />
-                                      번역된 텍스트 복사
+                                      Copy Translated Text
                                     </>
                                   )}
                                 </Button>
@@ -266,44 +266,41 @@ export function HistoryTabContent() {
             </div>
           )}
         </CardContent>
-        <CardFooter className="flex justify-between">
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={handlePreviousPage}
-            disabled={currentPage <= 1 || isLoading}
-          >
-            이전
-          </Button>
-          <div className="text-sm text-muted-foreground">
-            Page {currentPage} of {totalPages}
-          </div>
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={handleNextPage}
-            disabled={currentPage >= totalPages || isLoading}
-          >
-            다음
-          </Button>
-        </CardFooter>
+        {totalPages > 1 && (
+          <CardFooter className="flex justify-between">
+            <Button
+              variant="outline"
+              onClick={handlePreviousPage}
+              disabled={currentPage === 1 || isLoading}
+            >
+              Previous
+            </Button>
+            <div className="text-sm text-muted-foreground">
+              Page {currentPage} of {totalPages}
+            </div>
+            <Button
+              variant="outline"
+              onClick={handleNextPage}
+              disabled={currentPage === totalPages || isLoading}
+            >
+              Next
+            </Button>
+          </CardFooter>
+        )}
       </Card>
       
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>번역 기록 삭제</AlertDialogTitle>
+            <AlertDialogTitle>Delete Translation History</AlertDialogTitle>
             <AlertDialogDescription>
-              이 번역 기록을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.
+              Are you sure you want to delete this translation history? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>취소</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleDeleteConfirm}
-              className="bg-red-500 hover:bg-red-600"
-            >
-              삭제
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-red-500 hover:bg-red-600">
+              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

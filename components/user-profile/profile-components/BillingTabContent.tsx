@@ -19,7 +19,7 @@ export function BillingTabContent() {
   const userData = useAppSelector(state => state.user)
   const [addCardOpen, setAddCardOpen] = useState(false)
   
-  // 샘플 결제 기록 데이터
+  // Sample payment history data
   const invoices = [
     {
       id: "INV-001",

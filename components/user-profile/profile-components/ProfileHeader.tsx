@@ -12,7 +12,7 @@ interface ProfileHeaderProps {
 }
 
 export function ProfileHeader({ userName, avatarUrl, darkMode, toggleDarkMode }: ProfileHeaderProps) {
-  // 첫 글자를 따서 아바타 폴백 생성
+  // Create avatar fallback using first letter of name
   const getInitials = (name: string) => {
     return name
       .split(' ')

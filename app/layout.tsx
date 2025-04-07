@@ -8,13 +8,6 @@ import { Providers as ReduxProvider } from './providers'
 import { ThemeProvider } from "next-themes";
 import { ReactNode } from 'react';
 
-/*
-export const metadata: Metadata = {
-  title: 'goBrain',
-  description: 'AI Translator',
-  generator: 'goBrain',
-}
-*/
 export default function RootLayout({
   children,
 }: Readonly<{

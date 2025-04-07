@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { ChevronLeft, ChevronRight, Home, Settings, CreditCard, History, UserIcon, LogOut } from "lucide-react"
+import { ChevronLeft, ChevronRight, Home, Settings, CreditCard, History, UserIcon, LogOut, Shield } from "lucide-react"
 import Link from "next/link"
 import { useSidebar } from "@/lib/contexts/sidebar-context"
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
@@ -21,32 +21,51 @@ export function UserSidebar() {
     router.push('/')
   }
   
+  const handleNavClick = (value: string) => {
+    const event = new CustomEvent('tabChange', { detail: { tab: value } });
+    document.dispatchEvent(event);
+  };
+  
   const navItems = [
+    {
+      title: "Profile",
+      icon: UserIcon,
+      value: "profile",
+      onClick: () => handleNavClick("profile"),
+    },
+    {
+      title: "Subscription",
+      icon: CreditCard,
+      value: "subscription",
+      onClick: () => handleNavClick("subscription"),
+    },
+    {
+      title: "History",
+      icon: History,
+      value: "history",
+      onClick: () => handleNavClick("history"),
+    },
+    {
+      title: "Billing",
+      icon: CreditCard,
+      value: "billing",
+      onClick: () => handleNavClick("billing"),
+    },
+    {
+      title: "Security",
+      icon: Shield,
+      value: "security",
+      onClick: () => handleNavClick("security"),
+    },
     {
       title: "Dashboard",
       icon: Home,
       href: "/dashboard",
     },
     {
-      title: "Profile",
-      icon: UserIcon,
-      href: "#profile",
-      active: true,
-    },
-    {
-      title: "Billing",
-      icon: CreditCard,
-      href: "#billing",
-    },
-    {
-      title: "History",
-      icon: History,
-      href: "#history",
-    },
-    {
       title: "Settings",
       icon: Settings,
-      href: "#settings",
+      href: "/settings",
     },
   ]
   
@@ -82,17 +101,29 @@ export function UserSidebar() {
           <ul className="space-y-2">
             {navItems.map((item) => (
               <li key={item.title}>
-                <Link
-                  href={item.href}
-                  className={cn(
-                    "flex items-center h-10 px-2 rounded-md hover:bg-accent transition-colors",
-                    item.active && "bg-accent",
-                    expanded ? "justify-start" : "justify-center"
-                  )}
-                >
-                  <item.icon className="h-5 w-5" />
-                  {expanded && <span className="ml-2">{item.title}</span>}
-                </Link>
+                {item.href ? (
+                  <Link
+                    href={item.href}
+                    className={cn(
+                      "flex items-center h-10 px-2 rounded-md hover:bg-accent transition-colors",
+                      expanded ? "justify-start" : "justify-center"
+                    )}
+                  >
+                    <item.icon className="h-5 w-5" />
+                    {expanded && <span className="ml-2">{item.title}</span>}
+                  </Link>
+                ) : (
+                  <button
+                    onClick={item.onClick}
+                    className={cn(
+                      "flex items-center h-10 px-2 rounded-md hover:bg-accent transition-colors w-full",
+                      expanded ? "justify-start" : "justify-center"
+                    )}
+                  >
+                    <item.icon className="h-5 w-5" />
+                    {expanded && <span className="ml-2">{item.title}</span>}
+                  </button>
+                )}
               </li>
             ))}
           </ul>

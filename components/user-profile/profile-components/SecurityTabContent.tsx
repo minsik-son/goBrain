@@ -26,8 +26,8 @@ export function SecurityTabContent({ supabase, toast }: SecurityTabContentProps)
     
     if (newPassword !== confirm) {
       toast({
-        title: "오류",
-        description: "새 비밀번호가 일치하지 않습니다.",
+        title: "Error",
+        description: "New passwords do not match.",
         variant: "destructive"
       })
       return
@@ -43,8 +43,8 @@ export function SecurityTabContent({ supabase, toast }: SecurityTabContentProps)
       if (error) throw error
       
       toast({
-        title: "성공",
-        description: "비밀번호가 성공적으로 변경되었습니다.",
+        title: "Success",
+        description: "Password has been successfully changed.",
       })
       
       setCurrent("")
@@ -53,8 +53,8 @@ export function SecurityTabContent({ supabase, toast }: SecurityTabContentProps)
       
     } catch (error: any) {
       toast({
-        title: "오류",
-        description: error.message || "비밀번호 변경 중 오류가 발생했습니다.",
+        title: "Error",
+        description: error.message || "An error occurred while changing the password.",
         variant: "destructive"
       })
     } finally {

@@ -41,14 +41,14 @@ export function SubscriptionTabContent({ plan }: SubscriptionTabContentProps) {
         </CardFooter>
       </Card>
       
-      {/* 요금제 비교 카드 */}
+      {/* Plan comparison card */}
       <Card>
         <CardHeader>
           <CardTitle>Available Plans</CardTitle>
           <CardDescription>Choose the plan that works for you</CardDescription>
         </CardHeader>
         <CardContent>
-          {/* 요금제 비교 내용 */}
+          {/* Plan comparison content */}
         </CardContent>
       </Card>
     </div>

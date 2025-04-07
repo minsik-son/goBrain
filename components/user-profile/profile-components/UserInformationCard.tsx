@@ -39,11 +39,11 @@ export function UserInformationCard({
   supabase, 
   toast 
 }: UserInformationCardProps) {
-  // Redux에서 유저 데이터 가져오기
+  // Get user data from Redux
   const userData = useAppSelector((state) => state.user)
   const dispatch = useAppDispatch()
   
-  // 폼 데이터 상태
+  // Form data state
   const [formData, setFormData] = useState({
     userName: "",
     email: "",
@@ -53,7 +53,7 @@ export function UserInformationCard({
   
   const [isSaving, setIsSaving] = useState(false)
   
-  // Redux store의 userData가 변경되면 폼 데이터 업데이트
+  // Update form data when userData in Redux store changes
   useEffect(() => {
     if (userData) {
       setFormData({
@@ -77,7 +77,7 @@ export function UserInformationCard({
     setIsSaving(true)
     
     try {
-      // Redux 액션 디스패치를 통해 사용자 프로필 업데이트
+      // Update user profile through Redux action dispatch
       await dispatch(updateUserProfile({
         fullName: formData.userName,
         email: formData.email,
@@ -86,13 +86,13 @@ export function UserInformationCard({
       })).unwrap()
       
       toast({
-        title: "성공",
-        description: "프로필이 성공적으로 업데이트되었습니다.",
+        title: "Success",
+        description: "Profile has been successfully updated.",
       })
     } catch (error: any) {
       toast({
-        title: "오류",
-        description: error || "프로필 업데이트 중 오류가 발생했습니다.",
+        title: "Error",
+        description: error || "An error occurred while updating the profile.",
         variant: "destructive"
       })
     } finally {
@@ -170,7 +170,7 @@ export function UserInformationCard({
           </div>
           <div className="space-y-2">
             <Label htmlFor="joined">Account Created</Label>
-            <p>{userData.createdAt || '정보를 불러오는 중...'}</p>
+            <p>{userData.createdAt || 'Loading information...'}</p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="plan">Plan</Label>
@@ -183,7 +183,7 @@ export function UserInformationCard({
           onClick={handleSaveChanges} 
           disabled={isSaving || userData.isLoading}
         >
-          {isSaving ? "저장 중..." : "Save Changes"}
+          {isSaving ? "Saving..." : "Save Changes"}
         </Button>
       </CardFooter>
     </Card>

@@ -29,7 +29,7 @@ export function ProfileTabContent({ supabase, toast }: ProfileTabContentProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const router = useRouter()
   
-  // Redux에서 사용자 정보 가져오기
+  // Get user information from Redux
   const userData = useAppSelector((state) => state.user)
   
   const handleDeleteAccount = async () => {
@@ -43,20 +43,20 @@ export function ProfileTabContent({ supabase, toast }: ProfileTabContentProps) {
         throw error
       }
       
-      // 성공적으로 삭제된 경우 로그아웃 및 리디렉션
+      // If successfully deleted, log out and redirect
       await supabase.auth.signOut()
       
       toast({
-        title: "성공",
-        description: "계정이 성공적으로 삭제되었습니다.",
+        title: "Success",
+        description: "Your account has been successfully deleted.",
       })
       
       router.push('/')
       
     } catch (error: any) {
       toast({
-        title: "오류",
-        description: error.message || "계정 삭제 중 오류가 발생했습니다.",
+        title: "Error",
+        description: error.message || "An error occurred while deleting the account.",
         variant: "destructive"
       })
     } finally {
@@ -84,7 +84,7 @@ export function ProfileTabContent({ supabase, toast }: ProfileTabContentProps) {
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground mb-4">
-            계정을 삭제하면 모든 데이터가 영구적으로 삭제되며 이 작업은 되돌릴 수 없습니다.
+            Deleting your account will permanently remove all your data and this action cannot be undone.
           </p>
           <Button 
             variant="destructive"
@@ -95,25 +95,25 @@ export function ProfileTabContent({ supabase, toast }: ProfileTabContentProps) {
         </CardContent>
       </Card>
       
-      {/* 계정 삭제 확인 다이얼로그 */}
+      {/* Account deletion confirmation dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader className="flex flex-col items-center gap-1">
             <div className="h-12 w-12 rounded-full bg-red-100 flex items-center justify-center mb-2">
               <AlertTriangle className="h-6 w-6 text-destructive" />
             </div>
-            <DialogTitle className="text-xl text-center">계정 삭제</DialogTitle>
+            <DialogTitle className="text-xl text-center">Delete Account</DialogTitle>
             <DialogDescription className="text-center">
-              정말로 계정을 삭제하시겠습니까? 이 작업은 되돌릴 수 없으며 모든 데이터가 영구적으로 삭제됩니다.
+              Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently deleted.
             </DialogDescription>
           </DialogHeader>
           <div className="bg-muted/50 p-4 rounded-md my-4">
             <p className="text-sm text-muted-foreground">
-              삭제되는 데이터:
+              Data to be deleted:
               <ul className="list-disc pl-5 mt-2 space-y-1">
-                <li>모든 번역 기록 및 설정</li>
-                <li>결제 정보 및 구독 정보</li>
-                <li>프로필 및 사용자 정보</li>
+                <li>All translation history and settings</li>
+                <li>Payment information and subscription details</li>
+                <li>Profile and user information</li>
               </ul>
             </p>
           </div>
@@ -124,7 +124,7 @@ export function ProfileTabContent({ supabase, toast }: ProfileTabContentProps) {
               onClick={() => setDeleteDialogOpen(false)}
               className="sm:flex-1"
             >
-              취소
+              Cancel
             </Button>
             <Button 
               type="button" 
@@ -133,7 +133,7 @@ export function ProfileTabContent({ supabase, toast }: ProfileTabContentProps) {
               disabled={isDeleting}
               className="sm:flex-1"
             >
-              {isDeleting ? "삭제 중..." : "계정 영구 삭제"}
+              {isDeleting ? "Deleting..." : "Permanently Delete Account"}
             </Button>
           </DialogFooter>
         </DialogContent>
