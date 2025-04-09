@@ -28,6 +28,12 @@ export function UserSidebar() {
   
   const navItems = [
     {
+      title: "Dashboard",
+      icon: Home,
+      value: "dashboard",
+      onClick: () => handleNavClick("dashboard"),
+    },
+    {
       title: "Profile",
       icon: UserIcon,
       value: "profile",
@@ -58,14 +64,10 @@ export function UserSidebar() {
       onClick: () => handleNavClick("security"),
     },
     {
-      title: "Dashboard",
-      icon: Home,
-      href: "/dashboard",
-    },
-    {
       title: "Settings",
       icon: Settings,
-      href: "/settings",
+      value: "settings",
+      onClick: () => handleNavClick("settings"),
     },
   ]
   
@@ -101,29 +103,16 @@ export function UserSidebar() {
           <ul className="space-y-2">
             {navItems.map((item) => (
               <li key={item.title}>
-                {item.href ? (
-                  <Link
-                    href={item.href}
-                    className={cn(
-                      "flex items-center h-10 px-2 rounded-md hover:bg-accent transition-colors",
-                      expanded ? "justify-start" : "justify-center"
-                    )}
-                  >
-                    <item.icon className="h-5 w-5" />
-                    {expanded && <span className="ml-2">{item.title}</span>}
-                  </Link>
-                ) : (
-                  <button
-                    onClick={item.onClick}
-                    className={cn(
-                      "flex items-center h-10 px-2 rounded-md hover:bg-accent transition-colors w-full",
-                      expanded ? "justify-start" : "justify-center"
-                    )}
-                  >
-                    <item.icon className="h-5 w-5" />
-                    {expanded && <span className="ml-2">{item.title}</span>}
-                  </button>
-                )}
+                <button
+                  onClick={item.onClick}
+                  className={cn(
+                    "flex items-center h-10 px-2 rounded-md hover:bg-accent transition-colors w-full",
+                    expanded ? "justify-start" : "justify-center"
+                  )}
+                >
+                  <item.icon className="h-5 w-5" />
+                  {expanded && <span className="ml-2">{item.title}</span>}
+                </button>
               </li>
             ))}
           </ul>

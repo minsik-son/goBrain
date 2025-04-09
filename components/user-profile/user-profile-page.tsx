@@ -22,6 +22,8 @@ import { ProfileHeader } from "./profile-components/ProfileHeader"
 import { NotificationAlert } from "./profile-components/NotificationAlert"
 import { SubscriptionTabContent } from "./profile-components/SubscriptionTabContent"
 import { BillingTabContent } from "./profile-components/BillingTabContent"
+import { DashboardTabContent } from "./profile-components/DashboardTabContent"
+import { SettingsTabContent } from "./profile-components/SettingsTabContent"
 
 export function UserProfilePage() {
   const [activeTab, setActiveTab] = useState("profile")
@@ -146,6 +148,12 @@ export function UserProfilePage() {
                 supabase={supabase}
                 toast={toast}
               />
+            </TabsContent>
+            <TabsContent value="dashboard">
+              <DashboardTabContent />
+            </TabsContent>
+            <TabsContent value="settings">
+              <SettingsTabContent />
             </TabsContent>
           </Tabs>
         </div>

@@ -2,12 +2,19 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
+import { useRouter } from "next/navigation"
 
 interface SubscriptionTabContentProps {
   plan: string
 }
 
 export function SubscriptionTabContent({ plan }: SubscriptionTabContentProps) {
+  const router = useRouter()
+  
+  const handleUpgradeClick = () => {
+    router.push('/pricing')
+  }
+  
   return (
     <div className="space-y-6">
       <Card>
@@ -37,7 +44,9 @@ export function SubscriptionTabContent({ plan }: SubscriptionTabContentProps) {
           </div>
         </CardContent>
         <CardFooter>
-          <Button>Upgrade Plan</Button>
+          {plan !== "Master" && (
+            <Button onClick={handleUpgradeClick}>Upgrade Plan</Button>
+          )}
         </CardFooter>
       </Card>
       
