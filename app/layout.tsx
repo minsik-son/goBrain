@@ -7,6 +7,7 @@ import { UserProvider } from "@/lib/contexts/user-context";
 import { Providers as ReduxProvider } from './providers'
 import { ThemeProvider } from "next-themes";
 import { ReactNode } from 'react';
+import { Analytics } from "@vercel/analytics/react"
 
 export default function RootLayout({
   children,
@@ -17,6 +18,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body>
+        <Analytics/>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
